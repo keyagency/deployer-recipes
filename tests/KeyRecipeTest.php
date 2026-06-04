@@ -88,8 +88,13 @@ final class KeyRecipeTest extends TestCase
         $failedTask = $this->deployer->tasks->get('deploy:failed');
 
         $this->assertContains('key:notify:start', $deployTask->getBefore(), 'deploy task should run key:notify:start before it');
-        $this->assertContains('key:healthcheck', $successTask->getAfter(), 'deploy:success task should run key:healthcheck after it');
-        $this->assertContains('key:notify:success', $successTask->getAfter(), 'deploy:success task should run key:notify:success after it');
         $this->assertContains('key:notify:failure', $failedTask->getAfter(), 'deploy:failed task should run key:notify:failure after it');
+
+        $successAfter = $successTask->getAfter();
+        $healthcheckIdx = array_search('key:healthcheck', $successAfter, true);
+        $notifySuccessIdx = array_search('key:notify:success', $successAfter, true);
+        $this->assertNotFalse($healthcheckIdx, 'deploy:success task should run key:healthcheck after it');
+        $this->assertNotFalse($notifySuccessIdx, 'deploy:success task should run key:notify:success after it');
+        $this->assertLessThan($notifySuccessIdx, $healthcheckIdx, 'key:healthcheck must run before key:notify:success so success is only reported when healthy');
     }
 }
