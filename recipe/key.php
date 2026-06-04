@@ -27,8 +27,10 @@ function key_slack_notify(string $color, string $status): void
             'mrkdwn_in' => ['text'],
         ]],
     ];
-    // Fire-and-forget: nothrow() prevents transport failures from propagating
-    // and aborting the deploy when Slack is unreachable.
+    /**
+     * Fire-and-forget: nothrow() prevents transport failures from propagating
+     * and aborting the deploy when Slack is unreachable.
+     */
     Httpie::post($webhook)->jsonBody($payload)->nothrow()->send();
 }
 
@@ -54,8 +56,10 @@ task('key:healthcheck', function () {
         return;
     }
     $expected = (int) get('healthcheck_expected_status');
-    // Pass nothrow=true so a non-2xx response returns a status instead of throwing,
-    // letting our comparison below produce the clear RuntimeException message.
+    /**
+     * Pass nothrow=true so a non-2xx response returns a status instead of throwing,
+     * letting our comparison below produce the clear RuntimeException message.
+     */
     $info = [];
     fetch($url, 'get', [], null, $info, true);
     $status = (int) ($info['http_code'] ?? 0);

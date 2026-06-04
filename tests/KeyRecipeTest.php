@@ -68,8 +68,10 @@ final class KeyRecipeTest extends TestCase
      */
     public function testSlackNotifyDoesNotThrowWhenWebhookUnreachable(): void
     {
-        // Set required placeholders so payload building does not throw before
-        // the HTTP request is even attempted.
+        /**
+         * Set required placeholders so payload building does not throw before
+         * the HTTP request is even attempted.
+         */
         \Deployer\set('application', 'test-app');
         \Deployer\set('target', 'production');
         \Deployer\set('hostname', 'localhost');
