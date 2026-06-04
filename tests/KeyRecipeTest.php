@@ -76,4 +76,20 @@ final class KeyRecipeTest extends TestCase
         $callback = $ref->getValue($task);
         $callback();
     }
+
+    /**
+     * Verifies that the hooks wired in recipe/key.php are registered on the
+     * correct Deployer tasks.
+     */
+    public function testDeployHooksWired(): void
+    {
+        $deployTask = $this->deployer->tasks->get('deploy');
+        $successTask = $this->deployer->tasks->get('deploy:success');
+        $failedTask = $this->deployer->tasks->get('deploy:failed');
+
+        $this->assertContains('key:notify:start', $deployTask->getBefore(), 'deploy task should run key:notify:start before it');
+        $this->assertContains('key:healthcheck', $successTask->getAfter(), 'deploy:success task should run key:healthcheck after it');
+        $this->assertContains('key:notify:success', $successTask->getAfter(), 'deploy:success task should run key:notify:success after it');
+        $this->assertContains('key:notify:failure', $failedTask->getAfter(), 'deploy:failed task should run key:notify:failure after it');
+    }
 }

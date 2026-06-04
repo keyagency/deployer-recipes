@@ -62,3 +62,8 @@ task('key:healthcheck', function () {
         throw new \RuntimeException("Healthcheck failed for $url: expected $expected, got $status");
     }
 });
+
+before('deploy', 'key:notify:start');
+after('deploy:success', 'key:healthcheck');
+after('deploy:success', 'key:notify:success');
+after('deploy:failed', 'key:notify:failure');
