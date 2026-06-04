@@ -62,6 +62,24 @@ final class KeyRecipeTest extends TestCase
         \Deployer\key_slack_notify('#cccccc', 'started');
     }
 
+    /**
+     * A connection-refused transport error must not escape key_slack_notify()
+     * and abort the deploy (fire-and-forget behaviour).
+     */
+    public function testSlackNotifyDoesNotThrowWhenWebhookUnreachable(): void
+    {
+        // Set required placeholders so payload building does not throw before
+        // the HTTP request is even attempted.
+        \Deployer\set('application', 'test-app');
+        \Deployer\set('target', 'production');
+        \Deployer\set('hostname', 'localhost');
+
+        // Connection refused must not abort a deploy (fire-and-forget).
+        \Deployer\set('slack_webhook', 'http://127.0.0.1:9/');
+        $this->expectNotToPerformAssertions();
+        \Deployer\key_slack_notify('#cccccc', 'started');
+    }
+
     public function testHealthcheckTaskRegistered(): void
     {
         $this->assertTrue($this->deployer->tasks->has('key:healthcheck'));

@@ -27,8 +27,9 @@ function key_slack_notify(string $color, string $status): void
             'mrkdwn_in' => ['text'],
         ]],
     ];
-    // Fire-and-forget: a failed notification must not abort the deploy.
-    Httpie::post($webhook)->jsonBody($payload)->send();
+    // Fire-and-forget: nothrow() prevents transport failures from propagating
+    // and aborting the deploy when Slack is unreachable.
+    Httpie::post($webhook)->jsonBody($payload)->nothrow()->send();
 }
 
 desc('Notify Slack that the deploy started');
