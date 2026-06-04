@@ -6,24 +6,24 @@ use Deployer\Utility\Httpie;
 
 require_once 'recipe/common.php';
 
-set('slack_webhook', '');
-set('slack_title', '{{application}}');
-set('slack_text', 'Deploy of `{{target}}` on *{{hostname}}*');
+set('key_slack_webhook', '');
+set('key_slack_title', '{{application}}');
+set('key_slack_text', 'Deploy of `{{target}}` on *{{hostname}}*');
 
-set('healthcheck_url', '');
-set('healthcheck_expected_status', 200);
+set('key_healthcheck_url', '');
+set('key_healthcheck_expected_status', 200);
 
 function key_slack_notify(string $color, string $status): void
 {
-    $webhook = get('slack_webhook');
+    $webhook = get('key_slack_webhook');
     if (empty($webhook)) {
         return;
     }
     $payload = [
         'attachments' => [[
             'color' => $color,
-            'title' => get('slack_title'),
-            'text' => get('slack_text') . ' — ' . $status,
+            'title' => get('key_slack_title'),
+            'text' => get('key_slack_text') . ' — ' . $status,
             'mrkdwn_in' => ['text'],
         ]],
     ];
@@ -49,13 +49,13 @@ task('key:notify:failure', function () {
     key_slack_notify('danger', 'failed');
 });
 
-desc('HTTP healthcheck against healthcheck_url; fails the deploy on mismatch');
+desc('HTTP healthcheck against key_healthcheck_url; fails the deploy on mismatch');
 task('key:healthcheck', function () {
-    $url = get('healthcheck_url');
+    $url = get('key_healthcheck_url');
     if (empty($url)) {
         return;
     }
-    $expected = (int) get('healthcheck_expected_status');
+    $expected = (int) get('key_healthcheck_expected_status');
     /**
      * Pass nothrow=true so a non-2xx response returns a status instead of throwing,
      * letting our comparison below produce the clear RuntimeException message.

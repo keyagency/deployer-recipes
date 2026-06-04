@@ -3,6 +3,23 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-06-04
+
+### Added
+
+- Statamic wrapper: `key:build:resources` task — builds the frontend locally in
+  a temporary git worktree (using the remote `.env`) and uploads `public/build/`
+  to the server. Configurable via `key_build_tmp_path` and `key_build_command`.
+
+### Changed
+
+- **BREAKING:** Prefixed all custom config keys with `key_` to avoid collisions
+  with Deployer's own options. Rename in your `deploy.php`:
+  `slack_webhook` → `key_slack_webhook`, `slack_title` → `key_slack_title`,
+  `slack_text` → `key_slack_text`, `healthcheck_url` → `key_healthcheck_url`,
+  `healthcheck_expected_status` → `key_healthcheck_expected_status`.
+  (Released as a patch because no projects depend on `1.0.0` yet.)
+
 ## [1.0.0] - 2026-06-04
 
 ### Added

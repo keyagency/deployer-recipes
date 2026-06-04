@@ -38,11 +38,11 @@ final class KeyRecipeTest extends TestCase
 
     public function testConfigDefaults(): void
     {
-        $this->assertSame('', $this->getRawConfig('slack_webhook'));
-        $this->assertSame('{{application}}', $this->getRawConfig('slack_title'));
-        $this->assertSame('Deploy of `{{target}}` on *{{hostname}}*', $this->getRawConfig('slack_text'));
-        $this->assertSame('', $this->getRawConfig('healthcheck_url'));
-        $this->assertSame(200, $this->getRawConfig('healthcheck_expected_status'));
+        $this->assertSame('', $this->getRawConfig('key_slack_webhook'));
+        $this->assertSame('{{application}}', $this->getRawConfig('key_slack_title'));
+        $this->assertSame('Deploy of `{{target}}` on *{{hostname}}*', $this->getRawConfig('key_slack_text'));
+        $this->assertSame('', $this->getRawConfig('key_healthcheck_url'));
+        $this->assertSame(200, $this->getRawConfig('key_healthcheck_expected_status'));
     }
 
     public function testNotifyTasksRegistered(): void
@@ -77,7 +77,7 @@ final class KeyRecipeTest extends TestCase
         \Deployer\set('hostname', 'localhost');
 
         // Connection refused must not abort a deploy (fire-and-forget).
-        \Deployer\set('slack_webhook', 'http://127.0.0.1:9/');
+        \Deployer\set('key_slack_webhook', 'http://127.0.0.1:9/');
         $this->expectNotToPerformAssertions();
         \Deployer\key_slack_notify('#cccccc', 'started');
     }
