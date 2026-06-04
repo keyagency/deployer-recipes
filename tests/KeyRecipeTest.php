@@ -61,4 +61,9 @@ final class KeyRecipeTest extends TestCase
         $this->expectNotToPerformAssertions();
         \Deployer\key_slack_notify('#cccccc', 'started');
     }
+
+    public function testHealthcheckTaskRegistered(): void
+    {
+        $this->assertTrue($this->deployer->tasks->has('key:healthcheck'));
+    }
 }

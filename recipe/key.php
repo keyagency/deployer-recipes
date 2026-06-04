@@ -45,3 +45,16 @@ desc('Notify Slack that the deploy failed');
 task('key:notify:failure', function () {
     key_slack_notify('danger', 'failed');
 });
+
+desc('HTTP healthcheck against healthcheck_url; fails the deploy on mismatch');
+task('key:healthcheck', function () {
+    $url = get('healthcheck_url');
+    if (empty($url)) {
+        return;
+    }
+    $expected = (int) get('healthcheck_expected_status');
+    $status = (int) runLocally("curl -s -o /dev/null -w '%{http_code}' {{healthcheck_url}}");
+    if ($status !== $expected) {
+        throw new \RuntimeException("Healthcheck failed for $url: expected $expected, got $status");
+    }
+});
