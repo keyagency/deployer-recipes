@@ -8,9 +8,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application;
 
-// Each test method runs in its own PHP process so the recipe file (and any
-// functions it defines) loads exactly once per method — no "cannot redeclare"
-// fatals and no cross-method singleton contamination.
+/**
+ * Each test method runs in its own PHP process so the recipe file (and any
+ * functions it defines) loads exactly once per method — no "cannot redeclare"
+ * fatals and no cross-method singleton contamination.
+ */
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
 final class KeyRecipeTest extends TestCase
@@ -19,16 +21,13 @@ final class KeyRecipeTest extends TestCase
 
     protected function setUp(): void
     {
-        // Fresh Deployer instance per test; require_once is correct here because
-        // each isolated process loads this file exactly once.
         $this->deployer = new Deployer(new Application());
         require_once __DIR__ . '/../recipe/key.php';
     }
 
     /**
      * Returns the raw (unresolved) value stored in Configuration without
-     * triggering placeholder expansion. Uses reflection to call the
-     * protected fetch() method on the Configuration instance.
+     * triggering placeholder expansion.
      */
     private function getRawConfig(string $key): mixed
     {
@@ -39,8 +38,6 @@ final class KeyRecipeTest extends TestCase
 
     public function testConfigDefaults(): void
     {
-        // No webhook/url baked in: safe defaults for a public package.
-        // Use getRawConfig for all values so placeholder strings are never expanded.
         $this->assertSame('', $this->getRawConfig('slack_webhook'));
         $this->assertSame('{{application}}', $this->getRawConfig('slack_title'));
         $this->assertSame('Deploy of `{{target}}` on *{{hostname}}*', $this->getRawConfig('slack_text'));
@@ -55,13 +52,13 @@ final class KeyRecipeTest extends TestCase
         $this->assertTrue($this->deployer->tasks->has('key:notify:failure'));
     }
 
+    /**
+     * Httpie::send() throws for an empty URL, so a missing no-op guard would
+     * make this call throw. No throw means the guard works.
+     */
     public function testSlackNotifyIsNoOpWhenWebhookIsEmpty(): void
     {
-        // slack_webhook defaults to '' (public-package safety guarantee).
-        // Httpie::send() throws RuntimeException('URL must not be empty ...') for an
-        // empty URL, so if the guard were missing this call would throw. No throw = no-op.
         $this->expectNotToPerformAssertions();
         \Deployer\key_slack_notify('#cccccc', 'started');
     }
-
 }
