@@ -40,11 +40,12 @@ final class KeyRecipeTest extends TestCase
     public function testConfigDefaults(): void
     {
         // No webhook/url baked in: safe defaults for a public package.
-        $this->assertSame('', $this->deployer->config['slack_webhook']);
+        // Use getRawConfig for all values so placeholder strings are never expanded.
+        $this->assertSame('', $this->getRawConfig('slack_webhook'));
         $this->assertSame('{{application}}', $this->getRawConfig('slack_title'));
         $this->assertSame('Deploy of `{{target}}` on *{{hostname}}*', $this->getRawConfig('slack_text'));
-        $this->assertSame('', $this->deployer->config['healthcheck_url']);
-        $this->assertSame(200, $this->deployer->config['healthcheck_expected_status']);
+        $this->assertSame('', $this->getRawConfig('healthcheck_url'));
+        $this->assertSame(200, $this->getRawConfig('healthcheck_expected_status'));
     }
 
     public function testNotifyTasksRegistered(): void
@@ -52,6 +53,15 @@ final class KeyRecipeTest extends TestCase
         $this->assertTrue($this->deployer->tasks->has('key:notify:start'));
         $this->assertTrue($this->deployer->tasks->has('key:notify:success'));
         $this->assertTrue($this->deployer->tasks->has('key:notify:failure'));
+    }
+
+    public function testSlackNotifyIsNoOpWhenWebhookIsEmpty(): void
+    {
+        // slack_webhook defaults to '' (public-package safety guarantee).
+        // Httpie::send() throws RuntimeException('URL must not be empty ...') for an
+        // empty URL, so if the guard were missing this call would throw. No throw = no-op.
+        $this->expectNotToPerformAssertions();
+        \Deployer\key_slack_notify('#cccccc', 'started');
     }
 
 }

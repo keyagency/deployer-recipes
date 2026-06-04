@@ -34,7 +34,8 @@ function key_slack_notify(string $color, string $status): void
             'mrkdwn_in' => ['text'],
         ]],
     ];
-    // Deployer\Utility\Httpie — real API: ::post(url)->jsonBody(array)->send()
+    // Fire-and-forget: a failed Slack notification must never abort the deploy,
+    // so the HTTP response is intentionally ignored (non-2xx responses don't throw).
     Httpie::post($webhook)->jsonBody($payload)->send();
 }
 
