@@ -66,4 +66,14 @@ final class KeyRecipeTest extends TestCase
     {
         $this->assertTrue($this->deployer->tasks->has('key:healthcheck'));
     }
+
+    public function testHealthcheckIsNoOpWhenUrlIsEmpty(): void
+    {
+        $this->expectNotToPerformAssertions();
+        $task = $this->deployer->tasks->get('key:healthcheck');
+        // Task::$callback is private with no public getter; use reflection to invoke it.
+        $ref = new \ReflectionProperty($task, 'callback');
+        $callback = $ref->getValue($task);
+        $callback();
+    }
 }

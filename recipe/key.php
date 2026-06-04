@@ -53,7 +53,11 @@ task('key:healthcheck', function () {
         return;
     }
     $expected = (int) get('healthcheck_expected_status');
-    $status = (int) runLocally("curl -s -o /dev/null -w '%{http_code}' {{healthcheck_url}}");
+    // Pass nothrow=true so a non-2xx response returns a status instead of throwing,
+    // letting our comparison below produce the clear RuntimeException message.
+    $info = [];
+    fetch($url, 'get', [], null, $info, true);
+    $status = (int) ($info['http_code'] ?? 0);
     if ($status !== $expected) {
         throw new \RuntimeException("Healthcheck failed for $url: expected $expected, got $status");
     }
