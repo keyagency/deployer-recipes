@@ -47,4 +47,11 @@ final class KeyRecipeTest extends TestCase
         $this->assertSame(200, $this->deployer->config['healthcheck_expected_status']);
     }
 
+    public function testNotifyTasksRegistered(): void
+    {
+        $this->assertTrue($this->deployer->tasks->has('key:notify:start'));
+        $this->assertTrue($this->deployer->tasks->has('key:notify:success'));
+        $this->assertTrue($this->deployer->tasks->has('key:notify:failure'));
+    }
+
 }
