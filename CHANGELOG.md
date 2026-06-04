@@ -3,6 +3,22 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-06-04
+
+### Added
+
+- Statamic content sync tasks: `key:sync:content` (optionally including forms,
+  addons and assets), `key:sync:assets`, `key:sync:forms`, `key:sync:addons`.
+  Rsync-based, with a single direction/overwrite/delete prompt and a Statamic
+  cache refresh afterwards. Paths are configurable via `key_sync_map`, and
+  sources that do not exist are skipped instead of failing the sync.
+
+### Changed
+
+- Split the Statamic recipe into per-feature files
+  (`recipe/key/statamic/build.php`, `recipe/key/statamic/sync.php`) loaded by
+  `recipe/key/statamic.php`.
+
 ## [1.0.1] - 2026-06-04
 
 ### Added

@@ -40,10 +40,19 @@ Each wrapper loads Deployer's base recipe for that platform plus the shared
   HTTP status of `key_healthcheck_url` does not match
   `key_healthcheck_expected_status`.
 
-The Statamic wrapper additionally registers `key:build:resources`, which builds
-the frontend locally (in a temporary git worktree, using the remote `.env`) and
-uploads `public/build/` to the server. It is not wired into the deploy flow;
-call it directly (`dep key:build:resources <host>`) or hook it yourself.
+The Statamic wrapper additionally registers:
+
+- `key:build:resources` — builds the frontend locally (in a temporary git
+  worktree, using the remote `.env`) and uploads `public/build/` to the server.
+- `key:sync:content` / `key:sync:assets` / `key:sync:forms` / `key:sync:addons`
+  — rsync content between the server and your machine. You are asked once for
+  the direction (remote → local by default) and, when pushing to remote, for
+  overwrite/delete confirmation; `key:sync:content` can also include forms,
+  addons and assets in one run. Paths come from `key_sync_map`. Sources that do
+  not exist are skipped, so optional files never fail the sync.
+
+These Statamic tasks are not wired into the deploy flow; call them directly,
+e.g. `dep key:sync:content <host>`.
 
 All custom config keys are prefixed with `key_` to avoid collisions with
 Deployer's own options.
@@ -59,6 +68,7 @@ Deployer's own options.
 | `key_healthcheck_expected_status` | `200` | Expected HTTP status. |
 | `key_build_tmp_path` | `<system temp>/deployer-build` | Statamic: base dir for the temporary build worktree. |
 | `key_build_command` | `yarn && yarn build` | Statamic: local build command. |
+| `key_sync_map` | Statamic defaults | Statamic: dirs/files to sync per type (`content`, `assets`, `forms`, `addons`). Override to match your project. |
 
 > No webhook URL is bundled in this package. Each project supplies its own, so
 > installing the package never posts to anyone else's Slack.

@@ -47,7 +47,8 @@ function key_sync_prompt(string $label): ?array
 
 /**
  * Sync a content type between the server and the local machine via rsync.
- * Pure executor: direction and delete are decided by the caller.
+ * Pure executor: direction and delete are decided by the caller. Directories
+ * may mirror deletions; single files never do.
  */
 function key_sync(string $type, bool $toLocal, bool $delete): void
 {
@@ -57,23 +58,35 @@ function key_sync(string $type, bool $toLocal, bool $delete): void
         return;
     }
 
-    $remote = get('remote_user') . '@' . get('hostname') . ':' . get('current_path') . '/';
-    $local = getcwd() . '/';
-    $deleteFlag = $delete ? '--delete' : '';
-
     ['dirs' => $dirs, 'files' => $files] = $map[$type];
 
     foreach ($dirs as $path) {
-        [$from, $to] = $toLocal ? [$remote . $path, $local . $path] : [$local . $path, $remote . $path];
-        info('⭐️ Syncing dir [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote'));
-        info(runLocally("rsync -chavzPL --stats $deleteFlag '$from' '$to'"));
+        key_rsync($type, $path, $toLocal, $delete);
+    }
+    foreach ($files as $path) {
+        key_rsync($type, $path, $toLocal, false);
+    }
+}
+
+/**
+ * Sync a single path with rsync, skipping it when the source side does not
+ * exist so a missing optional file/dir never fails the whole sync.
+ */
+function key_rsync(string $type, string $path, bool $toLocal, bool $delete): void
+{
+    $remote = get('remote_user') . '@' . get('hostname') . ':' . get('current_path') . '/' . $path;
+    $local = getcwd() . '/' . $path;
+
+    $sourceExists = $toLocal ? test("[ -e {{current_path}}/$path ]") : file_exists($local);
+    if (!$sourceExists) {
+        info('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist');
+        return;
     }
 
-    foreach ($files as $path) {
-        [$from, $to] = $toLocal ? [$remote . $path, $local . $path] : [$local . $path, $remote . $path];
-        info('⭐️ Syncing file [' . strtoupper($type) . ': ' . basename($path) . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote'));
-        info(runLocally("rsync -chavzPL --stats '$from' '$to'"));
-    }
+    [$from, $to] = $toLocal ? [$remote, $local] : [$local, $remote];
+    $deleteFlag = $delete ? '--delete' : '';
+    info('⭐️ Syncing [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote'));
+    info(runLocally("rsync -chavzPL --stats $deleteFlag '$from' '$to'"));
 }
 
 /**
