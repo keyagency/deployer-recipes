@@ -1,0 +1,134 @@
+<?php
+
+namespace Deployer;
+
+/**
+ * Shared rsync-based sync helpers, used by the per-platform sync recipes in
+ * recipe/key/<platform>/sync.php. Each platform defines its own key_sync_map
+ * and tasks on top of these.
+ */
+
+set('key_sync_excludes', []);
+set('key_sync_backup', false);
+
+/**
+ * Ask once for the sync direction and, when pushing to remote, the overwrite
+ * and delete confirmations. Returns [$toLocal, $delete], or null if cancelled.
+ */
+function key_sync_prompt(string $label): ?array
+{
+    $remoteToLocal = '⬇️ REMOTE → LOCAL';
+    $localToRemote = '⬆️ LOCAL → REMOTE (⚠️ this will overwrite remote ' . $label . '!)';
+    $direction = askChoice('🔄️ Which direction do you want to sync?', [$remoteToLocal, $localToRemote], 0);
+
+    if ($direction === $remoteToLocal) {
+        // Remote → local always mirrors: delete local files that no longer exist remotely.
+        return [true, true];
+    }
+
+    if (!askConfirmation('⚠️ Sync from LOCAL to REMOTE? This may overwrite remote files! (Default: NO)', false)) {
+        writeln('<error>⚠️ Sync cancelled.</error>');
+        return null;
+    }
+    $delete = askConfirmation('🗑️ Also delete remote files that no longer exist locally? (Default: NO)', false);
+
+    return [false, $delete];
+}
+
+/**
+ * Whether the sync map defines any paths for the given type.
+ */
+function key_sync_map_has(string $type): bool
+{
+    $map = get('key_sync_map');
+    return !empty($map[$type]['dirs']) || !empty($map[$type]['files']);
+}
+
+/**
+ * Sync a content type between the server and the local machine via rsync.
+ * Pure executor: direction and delete are decided by the caller. Directories
+ * may mirror deletions; single files never do.
+ */
+function key_sync(string $type, bool $toLocal, bool $delete): void
+{
+    $map = get('key_sync_map');
+    if (!isset($map[$type])) {
+        writeln("<error>⚠️ Unknown sync type '$type'.</error>");
+        return;
+    }
+    if (!key_sync_map_has($type)) {
+        info('⏭️ Skipping [' . strtoupper($type) . '] — no paths configured in key_sync_map');
+        return;
+    }
+
+    ['dirs' => $dirs, 'files' => $files] = $map[$type];
+
+    foreach ($dirs as $path) {
+        if (get('key_sync_backup')) {
+            key_sync_backup_destination($path, $toLocal);
+        }
+        key_rsync($type, $path, $toLocal, $delete);
+    }
+    foreach ($files as $path) {
+        key_rsync($type, $path, $toLocal, false);
+    }
+}
+
+/**
+ * Copy the destination directory to "<dir>-backup" before it gets overwritten,
+ * so one sync mistake is always recoverable. Skipped silently when the
+ * destination does not exist yet.
+ */
+function key_sync_backup_destination(string $path, bool $toLocal): void
+{
+    $dir = rtrim($path, '/');
+    $backup = $dir . '-backup';
+
+    if ($toLocal) {
+        $local = getcwd() . '/' . $dir;
+        if (!is_dir($local)) {
+            return;
+        }
+        info("🛟 Backing up local $dir to $backup");
+        runLocally('rsync -a --delete ' . escapeshellarg($local . '/') . ' ' . escapeshellarg(getcwd() . '/' . $backup . '/'));
+    } else {
+        if (!test("[ -d {{current_path}}/$dir ]")) {
+            return;
+        }
+        info("🛟 Backing up remote $dir to $backup");
+        run("rm -rf {{current_path}}/$backup && cp -a {{current_path}}/$dir {{current_path}}/$backup");
+    }
+}
+
+/**
+ * Sync a single path with rsync, skipping it when the source side does not
+ * exist so a missing optional file/dir never fails the whole sync.
+ */
+function key_rsync(string $type, string $path, bool $toLocal, bool $delete): void
+{
+    $host = currentHost();
+    // Omit the user when unset so ssh falls back to the user's own ssh config.
+    $user = $host->getRemoteUser();
+    $remote = ($user ? $user . '@' : '') . $host->getHostname() . ':' . get('current_path') . '/' . $path;
+    $local = getcwd() . '/' . $path;
+
+    // Respect a non-default SSH port configured on the host.
+    $port = $host->getPort();
+    $ssh = $port ? "-e 'ssh -p $port'" : '';
+
+    $sourceExists = $toLocal ? test("[ -e {{current_path}}/$path ]") : file_exists($local);
+    if (!$sourceExists) {
+        info('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist');
+        return;
+    }
+
+    $excludes = '';
+    foreach ((array) get('key_sync_excludes') as $exclude) {
+        $excludes .= ' --exclude=' . escapeshellarg($exclude);
+    }
+
+    [$from, $to] = $toLocal ? [$remote, $local] : [$local, $remote];
+    $deleteFlag = $delete ? '--delete' : '';
+    info('⭐️ Syncing [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote'));
+    info(runLocally("rsync -chavzPL --stats $ssh$excludes $deleteFlag '$from' '$to'"));
+}

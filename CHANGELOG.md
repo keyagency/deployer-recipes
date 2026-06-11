@@ -3,6 +3,42 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] - 2026-06-11
+
+### Added
+
+- October CMS sync tasks: `key:sync:theme` (per-theme `content/` and `meta/`,
+  themes configurable via `key_october_themes`) and `key:sync:storage`
+  (`storage/app/uploads/` and `storage/app/media/`), with the same
+  direction/overwrite prompts as the Statamic sync. The October CMS cache is
+  cleared after each sync.
+- `key_sync_excludes`: rsync exclude patterns (October CMS defaults to
+  `['blocks.yaml']`).
+- `key_sync_backup`: when enabled, the destination directory is copied to
+  `<dir>-backup` before each sync — works for both October CMS and Statamic.
+- Healthcheck retries: `key_healthcheck_retries` (default 3) and
+  `key_healthcheck_pause` (default 5s), so one hiccup right after the release
+  switch no longer fails the deploy.
+- The Slack webhook is read from `KEY_SLACK_WEBHOOK` in the environment or the
+  project's `.env`. An explicit `set('key_slack_webhook', ...)` takes
+  precedence.
+
+### Changed
+
+- Extracted the shared sync helpers into `recipe/sync.php`;
+  `recipe/key/statamic/sync.php` now only contains the Statamic map, tasks and
+  cache refresh.
+
+### Fixed
+
+- Sync tasks now respect a non-default SSH port configured on the host and no
+  longer require `remote_user` to be set (ssh config decides when it is empty).
+- Sync types without configured paths in `key_sync_map` are skipped instead of
+  being offered as a silent no-op (the default `addons` map ships empty).
+- `key:build:resources` quotes the temporary path and branch for the shell, and
+  its cleanup falls back to `rm -rf` plus `git worktree prune` so leftover or
+  stale worktree state can never break the task.
+
 ## [1.0.2] - 2026-06-04
 
 ### Added

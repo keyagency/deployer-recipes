@@ -10,11 +10,20 @@ task('key:build:resources', function () {
     $branch = get('branch');
     $tmpDir = get('key_build_tmp_path') . '/' . currentHost()->getAlias();
 
-    // Clean up leftover state from a previous failed build.
-    runLocally("git worktree remove --force $tmpDir 2>/dev/null || rm -rf $tmpDir");
+    // Quote for shell use: the alias or branch may contain spaces or special characters.
+    $tmpDirArg = escapeshellarg($tmpDir);
+    $branchArg = escapeshellarg($branch);
+
+    /**
+     * Clean up leftover state from a previous failed build. The prune drops
+     * stale worktree metadata left behind when only the directory was removed,
+     * which would otherwise make `git worktree add` refuse the path.
+     */
+    runLocally("git worktree remove --force $tmpDirArg 2>/dev/null || rm -rf $tmpDirArg");
+    runLocally('git worktree prune');
 
     info("Checking out '$branch' to a temporary directory");
-    runLocally("git worktree add --detach $tmpDir $branch");
+    runLocally("git worktree add --detach $tmpDirArg $branchArg");
 
     try {
         // Build against the remote .env so Vite picks up production env vars, not local dev values.
@@ -22,11 +31,12 @@ task('key:build:resources', function () {
         download('{{deploy_path}}/shared/.env', "$tmpDir/.env");
 
         info('Building resources');
-        runLocally("cd $tmpDir && {{key_build_command}}");
+        runLocally("cd $tmpDirArg && {{key_build_command}}");
 
         run('mkdir -p {{release_or_current_path}}/public/build');
         upload("$tmpDir/public/build/", '{{release_or_current_path}}/public/build/');
     } finally {
-        runLocally("git worktree remove --force $tmpDir");
+        // Fall back to rm -rf so cleanup itself can never fail the task.
+        runLocally("git worktree remove --force $tmpDirArg 2>/dev/null || rm -rf $tmpDirArg");
     }
 });
