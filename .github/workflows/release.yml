@@ -27,6 +27,13 @@ jobs:
             exit 1
           fi
 
+      - name: Delete existing release for this tag, if any
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.tag_name == \"$GITHUB_REF_NAME\") | .id" \
+            | while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
         env:
