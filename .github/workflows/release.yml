@@ -30,4 +30,6 @@ jobs:
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
         env:
-          GH_TOKEN: ${{ github.token }}
+          # RELEASE_TOKEN is a personal access token, so the release is authored
+          # by that account instead of github-actions.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
