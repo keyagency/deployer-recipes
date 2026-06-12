@@ -25,7 +25,7 @@ final class SyncHelpersTest extends TestCase
         // info()/runLocally() need an output and a host context; the defaults throw.
         $this->deployer['output'] = new NullOutput();
         Context::push(new Context(new Host('test')));
-        require_once __DIR__ . '/../recipe/sync.php';
+        require_once __DIR__ . '/../recipe/helpers/sync.php';
 
         /**
          * key_sync_backup_destination() resolves local paths against getcwd(),

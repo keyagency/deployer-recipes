@@ -4,9 +4,13 @@ namespace Deployer;
 
 /**
  * Shared rsync-based sync helpers, used by the per-platform sync recipes in
- * recipe/key/<platform>/sync.php. Each platform defines its own key_sync_map
- * and tasks on top of these.
+ * recipe/key/<platform>/sync.php. Each platform defines a key_sync_<type>
+ * option per sync type (a flat list of paths; trailing slash = directory,
+ * no slash = single file) and registers tasks on top of these. Projects can
+ * append paths with add('key_sync_<type>', [...]).
  */
+
+require_once __DIR__ . '/general.php';
 
 set('key_sync_excludes', []);
 set('key_sync_backup', false);
@@ -27,7 +31,7 @@ function key_sync_prompt(string $label): ?array
     }
 
     if (!askConfirmation('⚠️ Sync from LOCAL to REMOTE? This may overwrite remote files! (Default: NO)', false)) {
-        writeln('<error>⚠️ Sync cancelled.</error>');
+        writeln('<error>' . key_label('⚠️ Sync cancelled.') . '</error>');
         return null;
     }
     $delete = askConfirmation('🗑️ Also delete remote files that no longer exist locally? (Default: NO)', false);
@@ -36,41 +40,36 @@ function key_sync_prompt(string $label): ?array
 }
 
 /**
- * Whether the sync map defines any paths for the given type.
+ * Whether any paths are configured for the given sync type.
  */
-function key_sync_map_has(string $type): bool
+function key_sync_has(string $type): bool
 {
-    $map = get('key_sync_map');
-    return !empty($map[$type]['dirs']) || !empty($map[$type]['files']);
+    return !empty(get("key_sync_$type", null));
 }
 
 /**
  * Sync a content type between the server and the local machine via rsync.
- * Pure executor: direction and delete are decided by the caller. Directories
- * may mirror deletions; single files never do.
+ * Pure executor: direction and delete are decided by the caller. Paths with a
+ * trailing slash are directories and may mirror deletions; single files never do.
  */
 function key_sync(string $type, bool $toLocal, bool $delete): void
 {
-    $map = get('key_sync_map');
-    if (!isset($map[$type])) {
-        writeln("<error>⚠️ Unknown sync type '$type'.</error>");
+    $paths = get("key_sync_$type", null);
+    if ($paths === null) {
+        writeln('<error>' . key_label("⚠️ Unknown sync type '$type'.") . '</error>');
         return;
     }
-    if (!key_sync_map_has($type)) {
-        info('⏭️ Skipping [' . strtoupper($type) . '] — no paths configured in key_sync_map');
+    if (empty($paths)) {
+        info(key_label('⏭️ Skipping [' . strtoupper($type) . "] — no paths configured in key_sync_$type"));
         return;
     }
 
-    ['dirs' => $dirs, 'files' => $files] = $map[$type];
-
-    foreach ($dirs as $path) {
-        if (get('key_sync_backup')) {
+    foreach ($paths as $path) {
+        $isDir = str_ends_with($path, '/');
+        if ($isDir && get('key_sync_backup')) {
             key_sync_backup_destination($path, $toLocal);
         }
-        key_rsync($type, $path, $toLocal, $delete);
-    }
-    foreach ($files as $path) {
-        key_rsync($type, $path, $toLocal, false);
+        key_rsync($type, $path, $toLocal, $isDir && $delete);
     }
 }
 
@@ -89,13 +88,13 @@ function key_sync_backup_destination(string $path, bool $toLocal): void
         if (!is_dir($local)) {
             return;
         }
-        info("🛟 Backing up local $dir to $backup");
+        info(key_label("🛟 Backing up local $dir to $backup"));
         runLocally('rsync -a --delete ' . escapeshellarg($local . '/') . ' ' . escapeshellarg(getcwd() . '/' . $backup . '/'));
     } else {
         if (!test("[ -d {{current_path}}/$dir ]")) {
             return;
         }
-        info("🛟 Backing up remote $dir to $backup");
+        info(key_label("🛟 Backing up remote $dir to $backup"));
         run("rm -rf {{current_path}}/$backup && cp -a {{current_path}}/$dir {{current_path}}/$backup");
     }
 }
@@ -118,7 +117,7 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
 
     $sourceExists = $toLocal ? test("[ -e {{current_path}}/$path ]") : file_exists($local);
     if (!$sourceExists) {
-        info('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist');
+        info(key_label('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist'));
         return;
     }
 
@@ -129,6 +128,6 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
 
     [$from, $to] = $toLocal ? [$remote, $local] : [$local, $remote];
     $deleteFlag = $delete ? '--delete' : '';
-    info('⭐️ Syncing [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote'));
+    info(key_label('⭐️ Syncing [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote')));
     info(runLocally("rsync -chavzPL --stats $ssh$excludes $deleteFlag '$from' '$to'"));
 }

@@ -3,6 +3,39 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] - 2026-06-12
+
+### Added
+
+- WordPress (Bedrock) wrapper `recipe/key/bedrock.php` with Bedrock shared
+  files/dirs defaults, a deploy flow that includes `deploy:vendors`, and two
+  tasks: `key:build:resources` (builds the theme configured via
+  `key_bedrock_theme` locally and uploads the `key_build_uploads` artifacts)
+  and `key:install:languages` (installs the `key_languages` via wp-cli).
+  Neither task is wired into the deploy flow.
+- Deployer defaults on every platform: `git_tty` (`true`), `writable_mode`
+  (`'skip'`) and `allow_anonymous_stats` (`false`).
+- `key_platform`: set by each wrapper recipe (`LARAVEL`, `STATAMIC`,
+  `OCTOBER CMS`, `BEDROCK`) and used to prefix task descriptions and log output
+  via the new `key_label()` helper in `recipe/helpers/general.php`.
+
+### Changed
+
+- **Breaking:** `key_sync_map` is replaced by a `key_sync_<type>` option per
+  sync type (Statamic: `key_sync_content`, `key_sync_assets`,
+  `key_sync_forms`, `key_sync_addons`; October CMS: `key_sync_theme`,
+  `key_sync_storage`). Each option is a flat list of paths: a trailing slash
+  marks a directory, no trailing slash a single file. Paths can be appended
+  with `add('key_sync_<type>', [...])` instead of redeclaring the full map.
+- **Breaking:** `key_sync_map_has()` is renamed to `key_sync_has()`.
+- The Statamic `key_sync_addons` option defaults to `['resources/addons/']`
+  instead of empty.
+- The shared helpers moved to `recipe/helpers/`: `recipe/sync.php` is now
+  `recipe/helpers/sync.php`, and `key_label()` lives in
+  `recipe/helpers/general.php`.
+- The Statamic wrapper shares `public/assets` and `content` between releases
+  via `shared_dirs`.
+
 ## [1.0.3] - 2026-06-11
 
 ### Added

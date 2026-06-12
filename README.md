@@ -2,7 +2,7 @@
 
 Key Agency's shared [Deployer 8](https://deployer.org) recipes: a base `key`
 recipe (Slack notifications + healthcheck) and per-platform wrappers with
-build and content-sync tasks for Statamic and October CMS.
+build and content-sync tasks.
 
 ## Install
 
@@ -12,38 +12,40 @@ composer require --dev keyagency/deployer-recipes
 
 ## Supported platforms
 
-| Platform | Require in `deploy.php` | Platform-specific tasks |
+Each platform has its own section below with everything you need: the require,
+the tasks and the configuration.
+
+| Platform | Section | Platform docs |
 | --- | --- | --- |
-| Laravel | `vendor/keyagency/deployer-recipes/recipe/key/laravel.php` | — |
-| Statamic | `vendor/keyagency/deployer-recipes/recipe/key/statamic.php` | `key:build:resources`, `key:sync:content`, `key:sync:assets`, `key:sync:forms`, `key:sync:addons` |
-| October CMS | `vendor/keyagency/deployer-recipes/recipe/key/october.php` | `key:sync:theme`, `key:sync:storage` |
+| Laravel | [Laravel](#laravel) | [laravel.com/docs](https://laravel.com/docs) |
+| Statamic | [Statamic](#statamic) | [statamic.dev](https://statamic.dev) |
+| October CMS | [October CMS](#october-cms) | [docs.octobercms.com](https://docs.octobercms.com) |
+| WordPress (Bedrock) | [WordPress (Bedrock)](#wordpress-bedrock) | [roots.io/bedrock/docs](https://roots.io/bedrock/docs/) |
+
+Is your platform not listed? See [Adding a platform](#adding-a-platform).
+
+## All platforms
 
 Every wrapper loads Deployer's base recipe for that platform plus the shared
-`key` recipe (Slack notifications + healthcheck). Is your platform not listed?
-See [Adding a platform](#adding-a-platform).
-
-## Usage
-
-In your project's `deploy.php`, require the wrapper for your platform (see the
-table above):
+`key` recipe. In your project's `deploy.php`, require the wrapper for your
+platform and define your host:
 
 ```php
 namespace Deployer;
 
-require 'vendor/keyagency/deployer-recipes/recipe/key/statamic.php';
+require 'vendor/keyagency/deployer-recipes/recipe/key/<platform>.php';
 
 host('production')->set('deploy_path', '/var/www/example');
-
-// Optional: enable the post-deploy healthcheck
-set('key_healthcheck_url', 'https://example.com/up');
-set('key_healthcheck_expected_status', 200);
-
-// Optional (sync tasks): back up the destination dir before each sync
-set('key_sync_backup', true);
-
-// Optional (October CMS): themes synced by key:sync:theme
-set('key_october_themes', ['default']);
 ```
+
+The shared `key` recipe registers on every platform:
+
+- `key:notify:start` / `key:notify:success` / `key:notify:failure` — Slack
+  messages, wired into the deploy flow (`before deploy`, `after deploy:success`,
+  `after deploy:failed`).
+- `key:healthcheck` — runs after `deploy:success` and fails the deploy if the
+  HTTP status of `key_healthcheck_url` does not match
+  `key_healthcheck_expected_status`.
 
 To enable Slack notifications, add the webhook to your project's `.env`
 (picked up automatically — no webhook means no notifications):
@@ -56,51 +58,19 @@ A real environment variable `KEY_SLACK_WEBHOOK` (e.g. in CI) takes precedence
 over the `.env` file, and an explicit `set('key_slack_webhook', ...)` in
 `deploy.php` wins over both.
 
-## Tasks
-
-The shared `key` recipe registers on every platform:
-
-- `key:notify:start` / `key:notify:success` / `key:notify:failure` — Slack
-  messages, wired into the deploy flow (`before deploy`, `after deploy:success`,
-  `after deploy:failed`).
-- `key:healthcheck` — runs after `deploy:success` and fails the deploy if the
-  HTTP status of `key_healthcheck_url` does not match
-  `key_healthcheck_expected_status`.
-
-The Statamic wrapper additionally registers:
-
-- `key:build:resources` — builds the frontend locally (in a temporary git
-  worktree, using the remote `.env`) and uploads `public/build/` to the server.
-- `key:sync:content` / `key:sync:assets` / `key:sync:forms` / `key:sync:addons`
-  — rsync content between the server and your machine. You are asked once for
-  the direction (remote → local by default) and, when pushing to remote, for
-  overwrite/delete confirmation; `key:sync:content` can also include forms,
-  addons and assets in one run. Paths come from `key_sync_map`. Sources that do
-  not exist are skipped, types without configured paths are skipped entirely,
-  and a non-default SSH port on the host is respected.
-
-The October CMS wrapper additionally registers:
-
-- `key:sync:theme` / `key:sync:storage` — same rsync-based sync as Statamic.
-  `theme` syncs `themes/<theme>/content/` and `themes/<theme>/meta/` for every
-  theme in `key_october_themes`; `storage` syncs `storage/app/uploads/` and
-  `storage/app/media/`. `blocks.yaml` is excluded by default via
-  `key_sync_excludes`. After each sync the October CMS cache is cleared.
-
-The sync tasks share their helpers (`recipe/sync.php`). With
-`key_sync_backup` enabled, the destination directory is copied to
-`<dir>-backup` before each sync, on both platforms.
-
-These sync/build tasks are not wired into the deploy flow; call them directly,
-e.g. `dep key:sync:content <host>`.
+> No webhook URL is bundled in this package. Each project supplies its own, so
+> installing the package never posts to anyone else's Slack.
 
 All custom config keys are prefixed with `key_` to avoid collisions with
-Deployer's own options.
+Deployer's own options. The shared recipe also sets a few Deployer defaults:
+`git_tty` (`true`), `writable_mode` (`'skip'`) and `allow_anonymous_stats`
+(`false`). Override them in your project's `deploy.php` when needed.
 
-## Configuration
+### Shared configuration
 
 | Key | Default | Description |
 | --- | --- | --- |
+| `key_platform` | per wrapper (`LARAVEL`, `STATAMIC`, `OCTOBER CMS`, `BEDROCK`) | Label that prefixes task descriptions and log output, e.g. `[STATAMIC] Syncing ...`. |
 | `key_slack_webhook` | `KEY_SLACK_WEBHOOK` from env/`.env`, else `''` | Slack incoming-webhook URL. Empty = notifications disabled. |
 | `key_slack_title` | `{{application}}` | Slack message title. |
 | `key_slack_text` | `Deploy of \`{{target}}\` on *{{hostname}}*` | Slack message body. |
@@ -108,15 +78,148 @@ Deployer's own options.
 | `key_healthcheck_expected_status` | `200` | Expected HTTP status. |
 | `key_healthcheck_retries` | `3` | Attempts before the healthcheck fails the deploy. |
 | `key_healthcheck_pause` | `5` | Seconds to wait between healthcheck attempts. |
-| `key_build_tmp_path` | `<system temp>/deployer-build` | Statamic: base dir for the temporary build worktree. |
-| `key_build_command` | `yarn && yarn build` | Statamic: local build command. |
-| `key_sync_map` | per platform | Dirs/files to sync per type (Statamic: `content`, `assets`, `forms`, `addons`; October CMS: `theme`, `storage`). Override to match your project. |
+
+## How syncing works
+
+Statamic and October CMS ship `key:sync:*` tasks that rsync content between
+the server and your machine. They are not wired into the deploy flow; call
+them directly, e.g. `dep key:sync:content production`.
+
+- You are asked once for the direction (remote → local by default) and, when
+  pushing to remote, for overwrite/delete confirmation.
+- Every sync type has its own `key_sync_<type>` option holding a flat list of
+  paths: a trailing slash marks a directory (which may mirror deletions and
+  gets the optional backup), no trailing slash marks a single file (never
+  deleted). Use Deployer's `add()` to append project-specific paths without
+  redeclaring the defaults:
+
+  ```php
+  add('key_sync_content', ['resources/navigation/']);
+  ```
+
+- Sources that do not exist are skipped, types without configured paths are
+  skipped entirely, and a non-default SSH port on the host is respected.
+- With `key_sync_backup` enabled, the destination directory is copied to
+  `<dir>-backup` before each sync.
+
+### Sync configuration
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `key_sync_<type>` | per platform | Paths to sync per type; see the platform sections for the available types and defaults. Extend with `add()` or override with `set()`. |
 | `key_sync_excludes` | `[]` (October CMS: `['blocks.yaml']`) | Rsync exclude patterns applied to every sync. |
 | `key_sync_backup` | `false` | Copy the destination dir to `<dir>-backup` before each sync. |
-| `key_october_themes` | `['default']` | October CMS: themes whose `content/` and `meta/` are synced by `key:sync:theme`. |
 
-> No webhook URL is bundled in this package. Each project supplies its own, so
-> installing the package never posts to anyone else's Slack.
+## Laravel
+
+```php
+require 'vendor/keyagency/deployer-recipes/recipe/key/laravel.php';
+```
+
+Loads Deployer's `laravel` recipe plus the shared `key` recipe. No
+platform-specific tasks or configuration.
+
+## Statamic
+
+```php
+require 'vendor/keyagency/deployer-recipes/recipe/key/statamic.php';
+```
+
+Loads Deployer's `statamic` recipe plus the shared `key` recipe, and shares
+`public/assets` and `content` between releases.
+
+### Tasks
+
+- `key:build:resources` — builds the frontend locally (in a temporary git
+  worktree, using the remote `.env`) and uploads `public/build/` to the server.
+  Not wired into the deploy flow; call it directly or wire it yourself.
+- `key:sync:content` / `key:sync:assets` / `key:sync:forms` / `key:sync:addons`
+  — see [How syncing works](#how-syncing-works). `key:sync:content` can also
+  include forms, addons and assets in one run. After each sync the Statamic
+  stache is refreshed.
+
+### Configuration
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `key_build_tmp_path` | `<system temp>/deployer-build` | Base dir for the temporary build worktree. |
+| `key_build_command` | `yarn && yarn build` | Local build command. |
+| `key_sync_content` | `['content/', 'resources/users/', 'resources/sites.yaml', 'resources/preferences.yaml']` | Paths synced by `key:sync:content`. |
+| `key_sync_assets` | `['public/assets/']` | Paths synced by `key:sync:assets`. |
+| `key_sync_forms` | `['resources/forms/', 'resources/blueprints/forms/']` | Paths synced by `key:sync:forms`. |
+| `key_sync_addons` | `['resources/addons/']` | Paths synced by `key:sync:addons`. |
+
+## October CMS
+
+```php
+require 'vendor/keyagency/deployer-recipes/recipe/key/october.php';
+```
+
+Loads Deployer's `laravel` recipe (October CMS is built on Laravel) plus the
+shared `key` recipe.
+
+### Tasks
+
+- `key:sync:theme` / `key:sync:storage` — see
+  [How syncing works](#how-syncing-works). `theme` syncs
+  `themes/<theme>/content/` and `themes/<theme>/meta/` for every theme in
+  `key_october_themes`; `storage` syncs `storage/app/uploads/` and
+  `storage/app/media/`. `blocks.yaml` is excluded by default. After each sync
+  the October CMS cache is cleared.
+
+To sync an extra theme, only the theme list needs to change:
+
+```php
+set('key_october_themes', ['default', 'second-theme']);
+```
+
+### Configuration
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `key_october_themes` | `['default']` | Themes whose `content/` and `meta/` are synced by `key:sync:theme`. |
+| `key_sync_theme` | derived from `key_october_themes` | Paths synced by `key:sync:theme`. Set the themes before calling `add('key_sync_theme', ...)`. |
+| `key_sync_storage` | `['storage/app/uploads/', 'storage/app/media/']` | Paths synced by `key:sync:storage`. |
+
+## WordPress (Bedrock)
+
+```php
+require 'vendor/keyagency/deployer-recipes/recipe/key/bedrock.php';
+
+set('key_bedrock_theme', 'my-theme');
+```
+
+Loads Deployer's `common` recipe (with `deploy:vendors` in the deploy flow,
+since Bedrock is composer-based) plus the shared `key` recipe, and shares
+`.env`, `web/.htaccess` and `web/app/uploads` between releases.
+
+### Tasks
+
+- `key:build:resources` — runs `key_build_command` locally in
+  `web/app/themes/<key_bedrock_theme>` and uploads the build artifacts from
+  `key_build_uploads` (default `assets/js/` and `style.css`) to the same theme
+  path on the server. Skips with a warning when `key_bedrock_theme` is not set.
+- `key:install:languages` — downloads `wp-cli.phar` into the release and
+  installs the core, plugin and theme languages for every language in
+  `key_languages`.
+
+Neither task is wired into the deploy flow; call them directly or wire them in
+your project's `deploy.php`:
+
+```php
+after('deploy:vendors', 'key:build:resources');
+before('deploy:publish', 'key:install:languages');
+```
+
+### Configuration
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `key_bedrock_theme` | `''` | Theme folder name; required for `key:build:resources`. |
+| `key_bedrock_theme_path` | `web/app/themes/<key_bedrock_theme>` | Theme path; override for a non-standard layout. |
+| `key_build_command` | `yarn && yarn build` | Local build command. |
+| `key_build_uploads` | `['assets/js/', 'style.css']` | Build artifacts to upload, relative to the theme path. Trailing slash = directory, no slash = single file. |
+| `key_languages` | `['nl_NL']` | Languages installed by `key:install:languages`. |
 
 ## Adding a platform
 
@@ -127,14 +230,20 @@ recipe and the shared `key` recipe:
 namespace Deployer;
 
 require_once 'recipe/<platform>.php';
+
+set('key_platform', '<PLATFORM>');
+
 require_once __DIR__ . '/../key.php';
 ```
 
+`key_platform` must be set before requiring `key.php`, so the task
+descriptions pick up the `[<PLATFORM>]` prefix.
+
 Platform-specific features live in per-feature files under
 `recipe/key/<platform>/` (e.g. `recipe/key/october/sync.php`), required by the
-wrapper. Sync features build on the shared helpers in `recipe/sync.php`:
-define a `key_sync_map` with the dirs/files per type and register tasks that
-call `key_sync_prompt()` and `key_sync()`.
+wrapper. Sync features build on the shared helpers in `recipe/helpers/sync.php`:
+define a `key_sync_<type>` option per sync type (a flat list of paths) and
+register tasks that call `key_sync_prompt()` and `key_sync()`.
 
 ## About Key Agency
 

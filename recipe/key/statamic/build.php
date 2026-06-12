@@ -5,7 +5,7 @@ namespace Deployer;
 set('key_build_tmp_path', sys_get_temp_dir() . '/deployer-build');
 set('key_build_command', 'yarn && yarn build');
 
-desc('Build frontend resources locally and upload them to the server');
+desc(key_label('Build frontend resources locally and upload them to the server'));
 task('key:build:resources', function () {
     $branch = get('branch');
     $tmpDir = get('key_build_tmp_path') . '/' . currentHost()->getAlias();
@@ -22,15 +22,15 @@ task('key:build:resources', function () {
     runLocally("git worktree remove --force $tmpDirArg 2>/dev/null || rm -rf $tmpDirArg");
     runLocally('git worktree prune');
 
-    info("Checking out '$branch' to a temporary directory");
+    info(key_label("Checking out '$branch' to a temporary directory"));
     runLocally("git worktree add --detach $tmpDirArg $branchArg");
 
     try {
         // Build against the remote .env so Vite picks up production env vars, not local dev values.
-        info('Fetching .env from the remote server');
+        info(key_label('Fetching .env from the remote server'));
         download('{{deploy_path}}/shared/.env', "$tmpDir/.env");
 
-        info('Building resources');
+        info(key_label('Building resources'));
         runLocally("cd $tmpDirArg && {{key_build_command}}");
 
         run('mkdir -p {{release_or_current_path}}/public/build');

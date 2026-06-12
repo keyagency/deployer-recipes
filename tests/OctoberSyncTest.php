@@ -26,31 +26,29 @@ final class OctoberSyncTest extends TestCase
         require_once __DIR__ . '/../recipe/key/october/sync.php';
     }
 
-    public function testSyncMapHasDetectsConfiguredTypes(): void
+    public function testSyncHasDetectsConfiguredTypes(): void
     {
-        $this->assertTrue(\Deployer\key_sync_map_has('theme'));
-        $this->assertTrue(\Deployer\key_sync_map_has('storage'));
-        $this->assertFalse(\Deployer\key_sync_map_has('nonexistent'));
+        $this->assertTrue(\Deployer\key_sync_has('theme'));
+        $this->assertTrue(\Deployer\key_sync_has('storage'));
+        $this->assertFalse(\Deployer\key_sync_has('nonexistent'));
     }
 
-    public function testSyncMapFollowsConfiguredThemes(): void
+    public function testThemePathsFollowConfiguredThemes(): void
     {
         // Set after the require: the lazy closure must pick this up on first get().
         \Deployer\set('key_october_themes', ['alpha', 'beta']);
 
-        $map = \Deployer\get('key_sync_map');
         $this->assertSame([
             'themes/alpha/content/',
             'themes/alpha/meta/',
             'themes/beta/content/',
             'themes/beta/meta/',
-        ], $map['theme']['dirs']);
+        ], \Deployer\get('key_sync_theme'));
     }
 
-    public function testStorageMapTargetsUploadsAndMedia(): void
+    public function testStoragePathsTargetUploadsAndMedia(): void
     {
-        $map = \Deployer\get('key_sync_map');
-        $this->assertSame(['storage/app/uploads/', 'storage/app/media/'], $map['storage']['dirs']);
+        $this->assertSame(['storage/app/uploads/', 'storage/app/media/'], \Deployer\get('key_sync_storage'));
     }
 
     public function testDefaultExcludesContainBlocksYaml(): void

@@ -41,6 +41,10 @@ final class WrapperRecipeTest extends TestCase
                 'key:sync:theme',
                 'key:sync:storage',
             ]],
+            'bedrock' => ['bedrock.php', [
+                'key:build:resources',
+                'key:install:languages',
+            ]],
         ];
     }
 }

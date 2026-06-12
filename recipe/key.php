@@ -5,6 +5,12 @@ namespace Deployer;
 use Deployer\Utility\Httpie;
 
 require_once 'recipe/common.php';
+require_once __DIR__ . '/helpers/general.php';
+
+// Deployer defaults for all platforms
+set('git_tty', true);
+set('writable_mode', 'skip');
+set('allow_anonymous_stats', false);
 
 /**
  * Read a variable from the real environment or, as a fallback, from the
@@ -61,22 +67,22 @@ function key_slack_notify(string $color, string $status): void
     Httpie::post($webhook)->jsonBody($payload)->nothrow()->send();
 }
 
-desc('Notify Slack that the deploy started');
+desc(key_label('Notify Slack that the deploy started'));
 task('key:notify:start', function () {
     key_slack_notify('#cccccc', 'started');
 });
 
-desc('Notify Slack that the deploy succeeded');
+desc(key_label('Notify Slack that the deploy succeeded'));
 task('key:notify:success', function () {
     key_slack_notify('good', 'succeeded');
 });
 
-desc('Notify Slack that the deploy failed');
+desc(key_label('Notify Slack that the deploy failed'));
 task('key:notify:failure', function () {
     key_slack_notify('danger', 'failed');
 });
 
-desc('HTTP healthcheck against key_healthcheck_url; fails the deploy on mismatch');
+desc(key_label('HTTP healthcheck against key_healthcheck_url; fails the deploy on mismatch'));
 task('key:healthcheck', function () {
     $url = get('key_healthcheck_url');
     if (empty($url)) {
@@ -103,7 +109,7 @@ task('key:healthcheck', function () {
             return;
         }
         if ($attempt < $retries) {
-            warning("Healthcheck attempt $attempt/$retries for $url got $status (expected $expected), retrying in {$pause}s");
+            warning(key_label("Healthcheck attempt $attempt/$retries for $url got $status (expected $expected), retrying in {$pause}s"));
             sleep($pause);
         }
     }

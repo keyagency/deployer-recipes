@@ -26,14 +26,23 @@ final class StatamicSyncTest extends TestCase
         require_once __DIR__ . '/../recipe/key/statamic/sync.php';
     }
 
-    public function testSyncMapHasDetectsConfiguredTypes(): void
+    public function testSyncHasDetectsConfiguredTypes(): void
     {
-        $this->assertTrue(\Deployer\key_sync_map_has('content'));
-        $this->assertTrue(\Deployer\key_sync_map_has('assets'));
-        $this->assertTrue(\Deployer\key_sync_map_has('forms'));
-        // addons ships empty by default and must be reported as unconfigured.
-        $this->assertFalse(\Deployer\key_sync_map_has('addons'));
-        $this->assertFalse(\Deployer\key_sync_map_has('nonexistent'));
+        $this->assertTrue(\Deployer\key_sync_has('content'));
+        $this->assertTrue(\Deployer\key_sync_has('assets'));
+        $this->assertTrue(\Deployer\key_sync_has('forms'));
+        $this->assertTrue(\Deployer\key_sync_has('addons'));
+        $this->assertFalse(\Deployer\key_sync_has('nonexistent'));
+    }
+
+    public function testAddAppendsPathsToDefaults(): void
+    {
+        \Deployer\add('key_sync_content', ['resources/navigation/']);
+
+        $paths = \Deployer\get('key_sync_content');
+        $this->assertContains('content/', $paths);
+        $this->assertContains('resources/sites.yaml', $paths);
+        $this->assertContains('resources/navigation/', $paths);
     }
 
     /**
@@ -44,6 +53,7 @@ final class StatamicSyncTest extends TestCase
     public function testSyncIsNoOpForEmptyType(): void
     {
         $this->expectNotToPerformAssertions();
+        \Deployer\set('key_sync_addons', []);
         \Deployer\key_sync('addons', true, true);
     }
 
