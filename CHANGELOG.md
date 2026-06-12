@@ -3,6 +3,14 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.5] - 2026-06-12
+
+### Changed
+
+- The release workflow authenticates with the `RELEASE_TOKEN` secret when
+  available, so releases are authored by that account, and replaces an
+  existing release when the same tag is pushed again.
+
 ## [1.0.4] - 2026-06-12
 
 ### Added
