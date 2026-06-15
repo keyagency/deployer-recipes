@@ -116,8 +116,20 @@ them directly, e.g. `dep key:sync:content production`.
 require 'vendor/keyagency/deployer-recipes/recipe/key/laravel.php';
 ```
 
-Loads Deployer's `laravel` recipe plus the shared `key` recipe. No
-platform-specific tasks or configuration.
+Loads Deployer's `laravel` recipe plus the shared `key` recipe.
+
+### Tasks
+
+- `key:build:resources` — builds the frontend locally (in a temporary git
+  worktree, using the remote `.env`) and uploads `public/build/` to the server.
+  Not wired into the deploy flow; call it directly or wire it yourself.
+
+### Configuration
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `key_build_tmp_path` | `<system temp>/deployer-build` | Base dir for the temporary build worktree. |
+| `key_build_command` | `yarn && yarn build` | Local build command. |
 
 ## Statamic
 

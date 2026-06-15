@@ -89,7 +89,7 @@ function key_sync_backup_destination(string $path, bool $toLocal): void
             return;
         }
         info(key_label("🛟 Backing up local $dir to $backup"));
-        runLocally('rsync -a --delete ' . escapeshellarg($local . '/') . ' ' . escapeshellarg(getcwd() . '/' . $backup . '/'));
+        runLocally('rsync -a --delete ' . quote($local . '/') . ' ' . quote(getcwd() . '/' . $backup . '/'));
     } else {
         if (!test("[ -d {{current_path}}/$dir ]")) {
             return;
@@ -123,7 +123,7 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
 
     $excludes = '';
     foreach ((array) get('key_sync_excludes') as $exclude) {
-        $excludes .= ' --exclude=' . escapeshellarg($exclude);
+        $excludes .= ' --exclude=' . quote($exclude);
     }
 
     [$from, $to] = $toLocal ? [$remote, $local] : [$local, $remote];

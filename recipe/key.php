@@ -39,7 +39,7 @@ function key_env(string $name): ?string
 // Lazy default: resolved on first get(), after deploy.php has fully loaded.
 set('key_slack_webhook', fn () => key_env('KEY_SLACK_WEBHOOK') ?? '');
 set('key_slack_title', '{{application}}');
-set('key_slack_text', 'Deploy of `{{target}}` on *{{hostname}}*');
+set('key_slack_text', 'Deploy of `{{target}}` to *{{alias}}* on `{{hostname}}`');
 
 set('key_healthcheck_url', '');
 set('key_healthcheck_expected_status', 200);

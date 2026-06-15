@@ -3,6 +3,15 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.6] - 2026-06-15
+
+### Added
+
+- Laravel `key:build:resources` task (`recipe/key/laravel/build.php`): builds
+  the frontend locally in a temporary git worktree (using the remote `.env`)
+  and uploads `public/build/` to the server. Configurable via
+  `key_build_tmp_path` and `key_build_command`.
+
 ## [1.0.5] - 2026-06-12
 
 ### Changed
