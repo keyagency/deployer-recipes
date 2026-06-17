@@ -119,4 +119,5 @@ task('key:healthcheck', function () {
 before('deploy', 'key:notify:start');
 after('deploy:success', 'key:healthcheck');
 after('deploy:success', 'key:notify:success');
+after('deploy:failed', 'deploy:unlock');
 after('deploy:failed', 'key:notify:failure');

@@ -39,3 +39,5 @@ task('key:build:resources', function () {
         runLocally("git worktree remove --force $tmpDirArg 2>/dev/null || rm -rf $tmpDirArg");
     }
 });
+
+after('deploy:vendors', 'key:build:resources');

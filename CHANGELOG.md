@@ -3,6 +3,20 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.7] - 2026-06-17
+
+### Added
+
+- `deploy:unlock` runs after `deploy:failed` on every platform
+  (`recipe/key.php`).
+
+### Changed
+
+- `key:build:resources` is wired into the deploy flow for Laravel and Statamic
+  via `after('deploy:vendors', 'key:build:resources')`.
+- The Statamic `deploy` task is overridden to drop `statamic:stache:warm`;
+  `statamic:stache:clear` is kept and moved after `deploy:publish`.
+
 ## [1.0.6] - 2026-06-15
 
 ### Added

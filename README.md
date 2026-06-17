@@ -47,6 +47,9 @@ The shared `key` recipe registers on every platform:
   HTTP status of `key_healthcheck_url` does not match
   `key_healthcheck_expected_status`.
 
+It also runs `deploy:unlock` after `deploy:failed`, so a failed deploy never
+leaves the release locked.
+
 To enable Slack notifications, add the webhook to your project's `.env`
 (picked up automatically — no webhook means no notifications):
 
@@ -122,7 +125,8 @@ Loads Deployer's `laravel` recipe plus the shared `key` recipe.
 
 - `key:build:resources` — builds the frontend locally (in a temporary git
   worktree, using the remote `.env`) and uploads `public/build/` to the server.
-  Not wired into the deploy flow; call it directly or wire it yourself.
+  Wired into the deploy flow via `after('deploy:vendors', 'key:build:resources')`;
+  override the `deploy` task to change or remove it.
 
 ### Configuration
 
@@ -138,13 +142,19 @@ require 'vendor/keyagency/deployer-recipes/recipe/key/statamic.php';
 ```
 
 Loads Deployer's `statamic` recipe plus the shared `key` recipe, and shares
-`public/assets` and `content` between releases.
+`public/assets` and `content` between releases. The `deploy` task is overridden
+to drop `statamic:stache:warm`; `statamic:stache:clear` is kept so new content
+is picked up (the Stache lives in shared storage and the watcher is disabled in
+production), but the slow warming is skipped and the Stache rebuilds lazily on
+the next request, which avoids slow deploys on large sites. Make sure the
+watcher is disabled in production (`STATAMIC_STACHE_WATCHER=auto`).
 
 ### Tasks
 
 - `key:build:resources` — builds the frontend locally (in a temporary git
   worktree, using the remote `.env`) and uploads `public/build/` to the server.
-  Not wired into the deploy flow; call it directly or wire it yourself.
+  Wired into the deploy flow via `after('deploy:vendors', 'key:build:resources')`;
+  override the `deploy` task to change or remove it.
 - `key:sync:content` / `key:sync:assets` / `key:sync:forms` / `key:sync:addons`
   — see [How syncing works](#how-syncing-works). `key:sync:content` can also
   include forms, addons and assets in one run. After each sync the Statamic
