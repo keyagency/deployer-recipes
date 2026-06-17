@@ -29,6 +29,7 @@ task('deploy', [
     'artisan:storage:link',
     'artisan:config:cache',
     'artisan:cache:clear',
+    'artisan:migrate',
     'deploy:publish',
     'statamic:stache:clear',
 ]);

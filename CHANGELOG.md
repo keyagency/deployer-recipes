@@ -3,6 +3,13 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.9] - 2026-06-17
+
+### Fixed
+
+- The Statamic `deploy` task runs `artisan:migrate` before `deploy:publish`
+  (`recipe/key/statamic.php`).
+
 ## [1.0.8] - 2026-06-17
 
 ### Added
