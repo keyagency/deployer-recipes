@@ -178,10 +178,17 @@ require 'vendor/keyagency/deployer-recipes/recipe/key/october.php';
 ```
 
 Loads Deployer's `laravel` recipe (October CMS is built on Laravel) plus the
-shared `key` recipe.
+shared `key` recipe. The `deploy` task is overridden to run the October CMS
+migrations (`october:migrate`) and mirror plugin and module assets into
+`public/` (`october:mirror`) before publishing, and to write the deployed git
+revision to `.version` (`system:update`).
 
 ### Tasks
 
+- `october:migrate` / `october:mirror` — run `artisan october:migrate` and
+  `artisan october:mirror` in the release. Part of the overridden `deploy` task.
+- `system:update` — writes `VERSION=<revision>` to `.version` in the release,
+  read from Deployer's `REVISION` file. Part of the `deploy` task.
 - `key:sync:theme` / `key:sync:storage` — see
   [How syncing works](#how-syncing-works). `theme` syncs
   `themes/<theme>/content/` and `themes/<theme>/meta/` for every theme in

@@ -3,6 +3,18 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.10] - 2026-06-18
+
+### Added
+
+- October CMS `deploy` task (`recipe/key/october.php`): `deploy:prepare`,
+  `system:update`, `deploy:vendors`, `october:migrate`, `october:mirror`,
+  `artisan:cache:clear`, `artisan:config:clear`, `deploy:publish`.
+- `october:migrate` and `october:mirror` tasks run `artisan october:migrate`
+  and `artisan october:mirror` in the release (`recipe/key/october.php`).
+- `system:update` task writes `VERSION=<revision>` to `.version` in the release
+  from Deployer's `REVISION` file (`recipe/key/october.php`).
+
 ## [1.0.9] - 2026-06-17
 
 ### Fixed
