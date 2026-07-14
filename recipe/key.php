@@ -3,6 +3,7 @@
 namespace Deployer;
 
 use Deployer\Utility\Httpie;
+use RuntimeException;
 
 require_once 'recipe/common.php';
 require_once __DIR__ . '/helpers/general.php';
@@ -15,7 +16,9 @@ set('allow_anonymous_stats', false);
 /**
  * Read a variable from the real environment or, as a fallback, from the
  * project's .env file in the current working directory. Returns null when
- * the variable is not defined in either place.
+ * the variable is not defined in either place. Follows dotenv semantics:
+ * the last assignment wins, surrounding quotes are stripped and unquoted
+ * values lose their inline comment.
  */
 function key_env(string $name): ?string
 {
@@ -28,12 +31,21 @@ function key_env(string $name): ?string
     if (!is_readable($file)) {
         return null;
     }
+    $value = null;
     foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if (preg_match('/^\s*(?:export\s+)?' . preg_quote($name, '/') . '\s*=\s*(.*)$/', $line, $matches)) {
-            return trim($matches[1], " \t\"'");
+        if (!preg_match('/^\s*(?:export\s+)?' . preg_quote($name, '/') . '\s*=\s*(.*)$/', $line, $matches)) {
+            continue;
+        }
+        $raw = trim($matches[1]);
+        if ($raw !== '' && ($raw[0] === '"' || $raw[0] === "'")) {
+            $closing = strpos($raw, $raw[0], 1);
+            $value = $closing === false ? substr($raw, 1) : substr($raw, 1, $closing - 1);
+        } else {
+            // Everything from the first " #" on is an inline comment.
+            $value = rtrim(preg_replace('/\s#.*$/', '', $raw));
         }
     }
-    return null;
+    return $value;
 }
 
 // Lazy default: resolved on first get(), after deploy.php has fully loaded.
@@ -106,6 +118,7 @@ task('key:healthcheck', function () {
         fetch($url, 'get', [], null, $info, true);
         $status = (int) ($info['http_code'] ?? 0);
         if ($status === $expected) {
+            info(key_label("Healthcheck OK for $url: got $status"));
             return;
         }
         if ($attempt < $retries) {
@@ -113,10 +126,14 @@ task('key:healthcheck', function () {
             sleep($pause);
         }
     }
-    throw new \RuntimeException("Healthcheck failed for $url after $retries attempt(s): expected $expected, got $status");
+    throw new RuntimeException("Healthcheck failed for $url after $retries attempt(s): expected $expected, got $status");
 });
 
 before('deploy', 'key:notify:start');
+/**
+ * Registration order matters: key:healthcheck runs before key:notify:success,
+ * so a failed healthcheck fails the deploy before success reaches Slack.
+ */
 after('deploy:success', 'key:healthcheck');
 after('deploy:success', 'key:notify:success');
 after('deploy:failed', 'deploy:unlock');

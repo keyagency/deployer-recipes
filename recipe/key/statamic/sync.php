@@ -14,17 +14,6 @@ set('key_sync_assets', ['public/assets/']);
 set('key_sync_forms', ['resources/forms/', 'resources/blueprints/forms/']);
 set('key_sync_addons', ['resources/addons/']);
 
-/**
- * Refresh the Statamic stache, locally or on the server.
- */
-function key_refresh_statamic_cache(bool $toLocal = true): void
-{
-    info(key_label('⭐️ Refreshing Statamic cache...'));
-    info($toLocal
-        ? runLocally('php please stache:refresh')
-        : run('cd {{release_or_current_path}} && {{bin/php}} please stache:refresh'));
-}
-
 desc(key_label('Sync content (and optionally forms, addons, assets) between server and local'));
 task('key:sync:content', function () {
     $answer = key_sync_prompt('content');
@@ -52,7 +41,7 @@ task('key:sync:content', function () {
     foreach ($types as $type) {
         key_sync($type, $toLocal, $delete);
     }
-    key_refresh_statamic_cache($toLocal);
+    key_refresh_cache('Statamic', 'please stache:refresh', $toLocal);
 });
 
 foreach (['assets', 'forms', 'addons'] as $type) {
@@ -64,6 +53,6 @@ foreach (['assets', 'forms', 'addons'] as $type) {
         }
         [$toLocal, $delete] = $answer;
         key_sync($type, $toLocal, $delete);
-        key_refresh_statamic_cache($toLocal);
+        key_refresh_cache('Statamic', 'please stache:refresh', $toLocal);
     });
 }

@@ -24,6 +24,13 @@ final class WrapperRecipeTest extends TestCase
         foreach ($extraTasks as $task) {
             $this->assertTrue($deployer->tasks->has($task), "task '$task' missing in $file");
         }
+
+        /**
+         * Wrappers redefine the deploy task after key.php wires its hooks;
+         * Deployer must keep the hooks on the redefined task.
+         */
+        $this->assertContains('key:notify:start', $deployer->tasks->get('deploy')->getBefore(), "deploy hook lost after redefinition in $file");
+        $this->assertContains('key:healthcheck', $deployer->tasks->get('deploy:success')->getAfter(), "healthcheck hook missing in $file");
     }
 
     public static function wrappers(): array
@@ -40,6 +47,7 @@ final class WrapperRecipeTest extends TestCase
             'october' => ['october.php', [
                 'key:sync:theme',
                 'key:sync:storage',
+                'key:asset:version',
             ]],
             'bedrock' => ['bedrock.php', [
                 'key:build:resources',

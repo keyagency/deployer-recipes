@@ -3,6 +3,45 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-07-14
+
+### Added
+
+- `key:healthcheck` logs an info line with the URL and HTTP status when the
+  check succeeds (`recipe/key.php`). Without `key_healthcheck_url` the task
+  stays silent.
+- CI workflow `.github/workflows/tests.yml` runs the PHPUnit suite on push
+  and pull request for PHP 8.3 and 8.4.
+- `WrapperRecipeTest` asserts that the `key:notify:start` and
+  `key:healthcheck` hooks survive the `deploy` task redefinition in the
+  platform wrappers.
+- October CMS `key:asset:version` task writes the first 8 characters of the
+  deployed commit as `ASSET_VERSION` to the shared `.env`; part of the
+  `deploy` task (`recipe/key/october.php`).
+- `artisan:view:clear` runs in the October CMS `deploy` task
+  (`recipe/key/october.php`).
+
+### Changed
+
+- The Laravel and Statamic `key:build:resources` task lives in a shared
+  `recipe/helpers/build.php`; `recipe/key/laravel/build.php` and
+  `recipe/key/statamic/build.php` are removed.
+- `key_refresh_statamic_cache()` and `key_refresh_october_cache()` are
+  replaced by a shared `key_refresh_cache()` (`recipe/helpers/sync.php`).
+- PHPUnit is upgraded to `^12`.
+- The PHP requirement is `^8.3` instead of `>=8.3` (`composer.json`).
+
+### Fixed
+
+- Shell commands in the sync helpers and the Bedrock build task quote their
+  paths (`recipe/helpers/sync.php`, `recipe/key/bedrock/build.php`).
+- `key_env()` follows dotenv semantics: the last assignment wins and
+  unquoted values lose their inline comment (`recipe/key.php`).
+- `testConfigDefaults` asserts the current `key_slack_text` default
+  (`tests/KeyRecipeTest.php`).
+- `testSlackNotifyDoesNotThrowWhenWebhookUnreachable` sets the `alias`
+  placeholder used by `key_slack_text` (`tests/KeyRecipeTest.php`).
+
 ## [1.0.10] - 2026-06-18
 
 ### Added

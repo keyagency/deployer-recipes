@@ -2,6 +2,14 @@
 
 namespace Deployer;
 
+/**
+ * Shared Vite build task for Laravel-based platforms (Laravel, Statamic):
+ * builds frontend resources locally in a git worktree and uploads the
+ * public/build output to the server.
+ */
+
+require_once __DIR__ . '/general.php';
+
 set('key_build_tmp_path', sys_get_temp_dir() . '/deployer-build');
 set('key_build_command', 'yarn && yarn build');
 

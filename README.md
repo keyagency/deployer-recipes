@@ -76,7 +76,7 @@ Deployer's own options. The shared recipe also sets a few Deployer defaults:
 | `key_platform` | per wrapper (`LARAVEL`, `STATAMIC`, `OCTOBER CMS`, `BEDROCK`) | Label that prefixes task descriptions and log output, e.g. `[STATAMIC] Syncing ...`. |
 | `key_slack_webhook` | `KEY_SLACK_WEBHOOK` from env/`.env`, else `''` | Slack incoming-webhook URL. Empty = notifications disabled. |
 | `key_slack_title` | `{{application}}` | Slack message title. |
-| `key_slack_text` | `Deploy of \`{{target}}\` on *{{hostname}}*` | Slack message body. |
+| `key_slack_text` | `Deploy of \`{{target}}\` to *{{alias}}* on \`{{hostname}}\`` | Slack message body. |
 | `key_healthcheck_url` | `''` | URL to check after a successful deploy. Empty = disabled. |
 | `key_healthcheck_expected_status` | `200` | Expected HTTP status. |
 | `key_healthcheck_retries` | `3` | Attempts before the healthcheck fails the deploy. |
@@ -189,6 +189,10 @@ revision to `.version` (`system:update`).
   `artisan october:mirror` in the release. Part of the overridden `deploy` task.
 - `system:update` — writes `VERSION=<revision>` to `.version` in the release,
   read from Deployer's `REVISION` file. Part of the `deploy` task.
+- `key:asset:version` — writes the first 8 characters of the deployed commit
+  as `ASSET_VERSION=<sha>` to the shared `.env`, for cache busting asset URLs
+  with `?v=<sha>`. Part of the `deploy` task; skips with a warning when the
+  `REVISION` file is missing.
 - `key:sync:theme` / `key:sync:storage` — see
   [How syncing works](#how-syncing-works). `theme` syncs
   `themes/<theme>/content/` and `themes/<theme>/meta/` for every theme in
@@ -272,7 +276,9 @@ Platform-specific features live in per-feature files under
 `recipe/key/<platform>/` (e.g. `recipe/key/october/sync.php`), required by the
 wrapper. Sync features build on the shared helpers in `recipe/helpers/sync.php`:
 define a `key_sync_<type>` option per sync type (a flat list of paths) and
-register tasks that call `key_sync_prompt()` and `key_sync()`.
+register tasks that call `key_sync_prompt()` and `key_sync()`. Platforms with
+a Vite build get the `key:build:resources` task by requiring the shared
+`recipe/helpers/build.php`, as the Laravel and Statamic wrappers do.
 
 ## About Key Agency
 

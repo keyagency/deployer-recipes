@@ -60,7 +60,7 @@ final class KeyRecipeTest extends TestCase
         $this->assertInstanceOf(\Closure::class, $this->getRawConfig('key_slack_webhook'));
         $this->assertSame('', \Deployer\get('key_slack_webhook'));
         $this->assertSame('{{application}}', $this->getRawConfig('key_slack_title'));
-        $this->assertSame('Deploy of `{{target}}` on *{{hostname}}*', $this->getRawConfig('key_slack_text'));
+        $this->assertSame('Deploy of `{{target}}` to *{{alias}}* on `{{hostname}}`', $this->getRawConfig('key_slack_text'));
         $this->assertSame('', $this->getRawConfig('key_healthcheck_url'));
         $this->assertSame(200, $this->getRawConfig('key_healthcheck_expected_status'));
         $this->assertSame(3, $this->getRawConfig('key_healthcheck_retries'));
@@ -77,6 +77,20 @@ final class KeyRecipeTest extends TestCase
     public function testWebhookDotEnvQuotesAreStripped(): void
     {
         file_put_contents($this->workDir . '/.env', "KEY_SLACK_WEBHOOK=\"https://hooks.slack.com/services/abc\"\n");
+
+        $this->assertSame('https://hooks.slack.com/services/abc', \Deployer\get('key_slack_webhook'));
+    }
+
+    public function testWebhookDotEnvLastAssignmentWins(): void
+    {
+        file_put_contents($this->workDir . '/.env', "KEY_SLACK_WEBHOOK=https://hooks.slack.com/first\nKEY_SLACK_WEBHOOK=https://hooks.slack.com/last\n");
+
+        $this->assertSame('https://hooks.slack.com/last', \Deployer\get('key_slack_webhook'));
+    }
+
+    public function testWebhookDotEnvInlineCommentIsStripped(): void
+    {
+        file_put_contents($this->workDir . '/.env', "KEY_SLACK_WEBHOOK=https://hooks.slack.com/services/abc # production webhook\n");
 
         $this->assertSame('https://hooks.slack.com/services/abc', \Deployer\get('key_slack_webhook'));
     }
@@ -126,6 +140,7 @@ final class KeyRecipeTest extends TestCase
          */
         \Deployer\set('application', 'test-app');
         \Deployer\set('target', 'production');
+        \Deployer\set('alias', 'production');
         \Deployer\set('hostname', 'localhost');
 
         // Connection refused must not abort a deploy (fire-and-forget).

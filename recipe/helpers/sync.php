@@ -40,6 +40,18 @@ function key_sync_prompt(string $label): ?array
 }
 
 /**
+ * Refresh the platform cache after a sync by running the given artisan-style
+ * command, locally or on the server.
+ */
+function key_refresh_cache(string $label, string $command, bool $toLocal = true): void
+{
+    info(key_label("⭐️ Refreshing $label cache..."));
+    info($toLocal
+        ? runLocally("php $command")
+        : run('cd {{release_or_current_path}} && {{bin/php}} ' . $command));
+}
+
+/**
  * Whether any paths are configured for the given sync type.
  */
 function key_sync_has(string $type): bool
@@ -91,11 +103,13 @@ function key_sync_backup_destination(string $path, bool $toLocal): void
         info(key_label("🛟 Backing up local $dir to $backup"));
         runLocally('rsync -a --delete ' . quote($local . '/') . ' ' . quote(getcwd() . '/' . $backup . '/'));
     } else {
-        if (!test("[ -d {{current_path}}/$dir ]")) {
+        $remoteDir = quote("{{current_path}}/$dir");
+        $remoteBackup = quote("{{current_path}}/$backup");
+        if (!test("[ -d $remoteDir ]")) {
             return;
         }
         info(key_label("🛟 Backing up remote $dir to $backup"));
-        run("rm -rf {{current_path}}/$backup && cp -a {{current_path}}/$dir {{current_path}}/$backup");
+        run("rm -rf $remoteBackup && cp -a $remoteDir $remoteBackup");
     }
 }
 
@@ -115,7 +129,7 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
     $port = $host->getPort();
     $ssh = $port ? "-e 'ssh -p $port'" : '';
 
-    $sourceExists = $toLocal ? test("[ -e {{current_path}}/$path ]") : file_exists($local);
+    $sourceExists = $toLocal ? test('[ -e ' . quote("{{current_path}}/$path") . ' ]') : file_exists($local);
     if (!$sourceExists) {
         info(key_label('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist'));
         return;
@@ -129,5 +143,5 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
     [$from, $to] = $toLocal ? [$remote, $local] : [$local, $remote];
     $deleteFlag = $delete ? '--delete' : '';
     info(key_label('⭐️ Syncing [' . strtoupper($type) . ': ' . $path . '] ' . ($toLocal ? 'FROM remote TO local' : 'FROM local TO remote')));
-    info(runLocally("rsync -chavzPL --stats $ssh$excludes $deleteFlag '$from' '$to'"));
+    info(runLocally("rsync -chavzPL --stats $ssh$excludes $deleteFlag " . quote($from) . ' ' . quote($to)));
 }

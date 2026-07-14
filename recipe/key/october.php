@@ -28,6 +28,27 @@ task('october:mirror', function () {
     info(run('cd {{release_or_current_path}} && {{bin/php}} artisan october:mirror'));
 });
 
+/**
+ * Themes append ?v=<ASSET_VERSION> to asset URLs for cache busting. Deployer
+ * writes the full sha to REVISION during deploy:update_code; the first 8
+ * characters are unique enough for a query string.
+ */
+desc(key_label('Write the deployed commit as ASSET_VERSION to the shared .env'));
+task('key:asset:version', function () {
+    $revision = trim(run('cat ' . quote('{{release_or_current_path}}/REVISION') . ' 2>/dev/null || true'));
+    if ($revision === '') {
+        warning(key_label('Skipping ASSET_VERSION: no REVISION file in the release'));
+        return;
+    }
+
+    $version = substr($revision, 0, 8);
+    info(key_label("Writing ASSET_VERSION=$version to the shared .env"));
+    $env = quote('{{deploy_path}}/shared/.env');
+    run("touch $env");
+    run("sed -i '/^ASSET_VERSION=/d' $env");
+    run('printf ' . quote('ASSET_VERSION=%s\n') . ' ' . quote($version) . " >> $env");
+});
+
 desc('Deploys your project');
 task('deploy', [
     'deploy:prepare',
@@ -35,7 +56,9 @@ task('deploy', [
     'deploy:vendors',
     'october:migrate',
     'october:mirror',
+    'key:asset:version',
     'artisan:cache:clear',
     'artisan:config:clear',
+    'artisan:view:clear',
     'deploy:publish',
 ]);

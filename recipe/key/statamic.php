@@ -12,7 +12,7 @@ add('writable_dirs', []);
 set('key_platform', 'STATAMIC');
 
 require_once __DIR__ . '/../key.php';
-require_once __DIR__ . '/statamic/build.php';
+require_once __DIR__ . '/../helpers/build.php';
 require_once __DIR__ . '/statamic/sync.php';
 
 /**

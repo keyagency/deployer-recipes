@@ -25,12 +25,12 @@ task('key:build:resources', function () {
     $remote = '{{release_or_current_path}}/' . $local;
 
     info(key_label('Building resources'));
-    runLocally("cd $local && {{key_build_command}}");
+    runLocally('cd ' . quote($local) . ' && {{key_build_command}}');
 
     foreach (get('key_build_uploads') as $path) {
         info(key_label("Uploading $path"));
         if (str_ends_with($path, '/')) {
-            run("mkdir -p $remote/$path");
+            run('mkdir -p ' . quote("$remote/$path"));
         }
         upload("$local/$path", "$remote/$path");
     }
