@@ -52,6 +52,17 @@ function key_refresh_cache(string $label, string $command, bool $toLocal = true)
 }
 
 /**
+ * Build a shell-safe remote path below {{current_path}}. Only the sub-path is
+ * quoted: the placeholder is expanded by Deployer after this string is built,
+ * so quoting it too would also quote whatever it expands to and stop the
+ * remote shell from expanding a leading ~ in the deploy path.
+ */
+function key_remote_path(string $path): string
+{
+    return '{{current_path}}/' . quote($path);
+}
+
+/**
  * Whether any paths are configured for the given sync type.
  */
 function key_sync_has(string $type): bool
@@ -103,8 +114,8 @@ function key_sync_backup_destination(string $path, bool $toLocal): void
         info(key_label("🛟 Backing up local $dir to $backup"));
         runLocally('rsync -a --delete ' . quote($local . '/') . ' ' . quote(getcwd() . '/' . $backup . '/'));
     } else {
-        $remoteDir = quote("{{current_path}}/$dir");
-        $remoteBackup = quote("{{current_path}}/$backup");
+        $remoteDir = key_remote_path($dir);
+        $remoteBackup = key_remote_path($backup);
         if (!test("[ -d $remoteDir ]")) {
             return;
         }
@@ -129,7 +140,7 @@ function key_rsync(string $type, string $path, bool $toLocal, bool $delete): voi
     $port = $host->getPort();
     $ssh = $port ? "-e 'ssh -p $port'" : '';
 
-    $sourceExists = $toLocal ? test('[ -e ' . quote("{{current_path}}/$path") . ' ]') : file_exists($local);
+    $sourceExists = $toLocal ? test('[ -e ' . key_remote_path($path) . ' ]') : file_exists($local);
     if (!$sourceExists) {
         info(key_label('⏭️ Skipping [' . strtoupper($type) . ': ' . $path . '] — source does not exist'));
         return;

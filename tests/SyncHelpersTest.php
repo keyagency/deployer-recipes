@@ -78,4 +78,24 @@ final class SyncHelpersTest extends TestCase
 
         $this->assertDirectoryDoesNotExist($this->workDir . '/content-backup');
     }
+
+    /**
+     * Remote paths are built before Deployer expands {{current_path}}, so the
+     * placeholder must stay outside the shell quoting. Quoting it along with
+     * the rest would hide a leading ~ from the remote shell, which then reads
+     * it as a literal directory name and reports every path as missing.
+     */
+    public function testRemotePathLeavesPlaceholderUnquoted(): void
+    {
+        $this->assertSame('{{current_path}}/content/', \Deployer\key_remote_path('content/'));
+    }
+
+    public function testRemotePathQuotesUnsafeCharactersInTheSubPath(): void
+    {
+        $path = \Deployer\key_remote_path('my content/');
+
+        $this->assertStringStartsWith('{{current_path}}/', $path);
+        $this->assertStringNotContainsString("{{current_path}}/'", $path);
+        $this->assertMatchesRegularExpression('/^\{\{current_path\}\}\/\$\'my content\/\'$/', $path);
+    }
 }

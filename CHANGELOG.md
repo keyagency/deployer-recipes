@@ -3,6 +3,22 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-07-20
+
+### Fixed
+
+- Remote source and backup checks in `recipe/helpers/sync.php` no longer quote
+  the `{{current_path}}` placeholder, so a `deploy_path` starting with `~` is
+  expanded by the remote shell again. Since 1.1.0 every path in
+  `key:sync:content`, `key:sync:assets`, `key:sync:forms` and
+  `key:sync:addons` was reported as "source does not exist" on such hosts, and
+  `key_sync_backup` silently skipped remote backups.
+
+### Added
+
+- `key_remote_path()` builds remote paths below `{{current_path}}`, quoting
+  only the sub-path (`recipe/helpers/sync.php`).
+
 ## [1.1.0] - 2026-07-14
 
 ### Added
