@@ -191,6 +191,120 @@ final class KeyRecipeTest extends TestCase
         $callback();
     }
 
+    public function testExpectedStatusAcceptsScalarsAndArrays(): void
+    {
+        \Deployer\set('key_healthcheck_expected_status', 200);
+        $this->assertSame([200], \Deployer\key_healthcheck_expected_statuses());
+
+        \Deployer\set('key_healthcheck_expected_status', '200');
+        $this->assertSame([200], \Deployer\key_healthcheck_expected_statuses());
+
+        \Deployer\set('key_healthcheck_expected_status', [200, 503]);
+        $this->assertSame([200, 503], \Deployer\key_healthcheck_expected_statuses());
+    }
+
+    // A misconfigured value must not make the healthcheck accept every response.
+    public function testExpectedStatusFallsBackToTwoHundred(): void
+    {
+        \Deployer\set('key_healthcheck_expected_status', '');
+        $this->assertSame([200], \Deployer\key_healthcheck_expected_statuses());
+
+        \Deployer\set('key_healthcheck_expected_status', []);
+        $this->assertSame([200], \Deployer\key_healthcheck_expected_statuses());
+    }
+
+    // A staging site answering 503 in maintenance mode must not fail the deploy.
+    public function testHealthcheckAcceptsAnyExpectedStatus(): void
+    {
+        $this->deployer['output'] = new \Symfony\Component\Console\Output\NullOutput();
+        \Deployer\Task\Context::push(new \Deployer\Task\Context(new \Deployer\Host\Host('test')));
+
+        [$process, $port] = $this->startWebServer(503);
+
+        try {
+            \Deployer\set('key_healthcheck_url', "http://127.0.0.1:$port/");
+            \Deployer\set('key_healthcheck_expected_status', [200, 503]);
+            \Deployer\set('key_healthcheck_retries', 1);
+            \Deployer\set('key_healthcheck_pause', 0);
+
+            $task = $this->deployer->tasks->get('key:healthcheck');
+            $ref = new \ReflectionProperty($task, 'callback');
+            $callback = $ref->getValue($task);
+
+            $callback();
+            $this->assertTrue(true, 'Healthcheck must not throw for a status listed in key_healthcheck_expected_status');
+        } finally {
+            $this->stopWebServer($process);
+        }
+    }
+
+    public function testHealthcheckFailsWhenStatusIsNotExpected(): void
+    {
+        $this->deployer['output'] = new \Symfony\Component\Console\Output\NullOutput();
+        \Deployer\Task\Context::push(new \Deployer\Task\Context(new \Deployer\Host\Host('test')));
+
+        [$process, $port] = $this->startWebServer(500);
+
+        try {
+            \Deployer\set('key_healthcheck_url', "http://127.0.0.1:$port/");
+            \Deployer\set('key_healthcheck_expected_status', [200, 503]);
+            \Deployer\set('key_healthcheck_retries', 1);
+            \Deployer\set('key_healthcheck_pause', 0);
+
+            $task = $this->deployer->tasks->get('key:healthcheck');
+            $ref = new \ReflectionProperty($task, 'callback');
+            $callback = $ref->getValue($task);
+
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('expected one of 200, 503, got 500');
+            $callback();
+        } finally {
+            $this->stopWebServer($process);
+        }
+    }
+
+    /**
+     * Boots PHP's built-in web server on a free port, answering every request
+     * with the given status. Returns the process handle and the port.
+     */
+    private function startWebServer(int $status): array
+    {
+        $probe = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($probe, "Could not reserve a port: $errstr");
+        $port = (int) explode(':', stream_socket_get_name($probe, false))[1];
+        fclose($probe);
+
+        $router = $this->workDir . '/router.php';
+        file_put_contents($router, "<?php http_response_code($status);\n");
+
+        $descriptors = [['pipe', 'r'], ['file', '/dev/null', 'w'], ['file', '/dev/null', 'w']];
+        $process = proc_open(
+            [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $this->workDir, $router],
+            $descriptors,
+            $pipes
+        );
+        $this->assertIsResource($process, 'Could not start the built-in web server');
+        fclose($pipes[0]);
+
+        // The server needs a moment before it accepts connections.
+        for ($i = 0; $i < 100; $i++) {
+            $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.1);
+            if ($connection !== false) {
+                fclose($connection);
+                return [$process, $port];
+            }
+            usleep(50000);
+        }
+
+        $this->fail("Built-in web server did not come up on port $port");
+    }
+
+    private function stopWebServer($process): void
+    {
+        proc_terminate($process);
+        proc_close($process);
+    }
+
     /**
      * Verifies that the hooks wired in recipe/key.php are registered on the
      * correct Deployer tasks.

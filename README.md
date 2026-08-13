@@ -45,7 +45,8 @@ The shared `key` recipe registers on every platform:
   `after deploy:failed`).
 - `key:healthcheck` — runs after `deploy:success` and fails the deploy if the
   HTTP status of `key_healthcheck_url` does not match
-  `key_healthcheck_expected_status`.
+  `key_healthcheck_expected_status`, which holds a single status or an array
+  of accepted statuses.
 
 It also runs `deploy:unlock` after `deploy:failed`, so a failed deploy never
 leaves the release locked.
@@ -78,7 +79,7 @@ Deployer's own options. The shared recipe also sets a few Deployer defaults:
 | `key_slack_title` | `{{application}}` | Slack message title. |
 | `key_slack_text` | `Deploy of \`{{target}}\` to *{{alias}}* on \`{{hostname}}\`` | Slack message body. |
 | `key_healthcheck_url` | `''` | URL to check after a successful deploy. Empty = disabled. |
-| `key_healthcheck_expected_status` | `200` | Expected HTTP status. |
+| `key_healthcheck_expected_status` | `200` | Expected HTTP status: a single status (`200`) or an array of accepted statuses (`[200, 503]`, e.g. staging in maintenance mode). |
 | `key_healthcheck_retries` | `3` | Attempts before the healthcheck fails the deploy. |
 | `key_healthcheck_pause` | `5` | Seconds to wait between healthcheck attempts. |
 

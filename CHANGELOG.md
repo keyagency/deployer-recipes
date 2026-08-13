@@ -3,6 +3,15 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-08-13
+
+### Changed
+
+- `key_healthcheck_expected_status` accepts an array of statuses next to a
+  single status (`recipe/key.php`). `key:healthcheck` passes when the response
+  matches any of them; with more than one status the warning and failure
+  messages read `expected one of 200, 503`.
+
 ## [1.1.1] - 2026-07-20
 
 ### Fixed

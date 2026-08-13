@@ -94,13 +94,30 @@ task('key:notify:failure', function () {
     key_slack_notify('danger', 'failed');
 });
 
+/**
+ * Normalise key_healthcheck_expected_status into a list of status codes:
+ * a single status (200) or several ([200, 503]). Falls back to [200] so a
+ * typo cannot silently disable the check.
+ */
+function key_healthcheck_expected_statuses(): array
+{
+    $configured = get('key_healthcheck_expected_status');
+    $statuses = array_map('intval', is_array($configured) ? $configured : [$configured]);
+    $statuses = array_values(array_filter($statuses, fn ($status) => $status > 0));
+
+    return $statuses === [] ? [200] : $statuses;
+}
+
 desc(key_label('HTTP healthcheck against key_healthcheck_url; fails the deploy on mismatch'));
 task('key:healthcheck', function () {
     $url = get('key_healthcheck_url');
     if (empty($url)) {
         return;
     }
-    $expected = (int) get('key_healthcheck_expected_status');
+    $expected = key_healthcheck_expected_statuses();
+    $expectedLabel = count($expected) === 1
+        ? "expected $expected[0]"
+        : 'expected one of ' . implode(', ', $expected);
     $retries = max(1, (int) get('key_healthcheck_retries'));
     $pause = (int) get('key_healthcheck_pause');
 
@@ -117,16 +134,16 @@ task('key:healthcheck', function () {
         $info = [];
         fetch($url, 'get', [], null, $info, true);
         $status = (int) ($info['http_code'] ?? 0);
-        if ($status === $expected) {
+        if (in_array($status, $expected, true)) {
             info(key_label("Healthcheck OK for $url: got $status"));
             return;
         }
         if ($attempt < $retries) {
-            warning(key_label("Healthcheck attempt $attempt/$retries for $url got $status (expected $expected), retrying in {$pause}s"));
+            warning(key_label("Healthcheck attempt $attempt/$retries for $url got $status ($expectedLabel), retrying in {$pause}s"));
             sleep($pause);
         }
     }
-    throw new RuntimeException("Healthcheck failed for $url after $retries attempt(s): expected $expected, got $status");
+    throw new RuntimeException("Healthcheck failed for $url after $retries attempt(s): $expectedLabel, got $status");
 });
 
 before('deploy', 'key:notify:start');
