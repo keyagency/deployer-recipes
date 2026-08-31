@@ -316,7 +316,13 @@ final class KeyRecipeTest extends TestCase
         $failedTask = $this->deployer->tasks->get('deploy:failed');
 
         $this->assertContains('key:notify:start', $deployTask->getBefore(), 'deploy task should run key:notify:start before it');
-        $this->assertContains('key:notify:failure', $failedTask->getAfter(), 'deploy:failed task should run key:notify:failure after it');
+
+        $failedAfter = $failedTask->getAfter();
+        $notifyFailureIdx = array_search('key:notify:failure', $failedAfter, true);
+        $unlockIdx = array_search('deploy:unlock', $failedAfter, true);
+        $this->assertNotFalse($notifyFailureIdx, 'deploy:failed task should run key:notify:failure after it');
+        $this->assertNotFalse($unlockIdx, 'deploy:failed task should run deploy:unlock after it');
+        $this->assertLessThan($unlockIdx, $notifyFailureIdx, 'key:notify:failure must run before deploy:unlock: Deployer aborts the remaining deploy:failed chain on the first failing task, and deploy:unlock fails whenever the host is unreachable');
 
         $successAfter = $successTask->getAfter();
         $healthcheckIdx = array_search('key:healthcheck', $successAfter, true);

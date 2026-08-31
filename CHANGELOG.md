@@ -3,6 +3,15 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] - 2026-08-31
+
+### Fixed
+
+- `key:notify:failure` is registered before `deploy:unlock` on `deploy:failed`
+  (`recipe/key.php`). Deployer stops the `deploy:failed` chain at the first
+  task that exits non-zero, so an unreachable host made `deploy:unlock` fail
+  and the Slack failure notification never ran.
+
 ## [1.1.2] - 2026-08-13
 
 ### Changed

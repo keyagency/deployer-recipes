@@ -153,5 +153,11 @@ before('deploy', 'key:notify:start');
  */
 after('deploy:success', 'key:healthcheck');
 after('deploy:success', 'key:notify:success');
-after('deploy:failed', 'deploy:unlock');
+/**
+ * Registration order matters here too: Deployer aborts the remaining
+ * deploy:failed chain as soon as one task fails, and deploy:unlock fails on
+ * every unreachable host. Notifying Slack first guarantees the failure is
+ * always reported, even when the deploy failed because the host was down.
+ */
 after('deploy:failed', 'key:notify:failure');
+after('deploy:failed', 'deploy:unlock');

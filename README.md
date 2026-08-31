@@ -49,7 +49,9 @@ The shared `key` recipe registers on every platform:
   of accepted statuses.
 
 It also runs `deploy:unlock` after `deploy:failed`, so a failed deploy never
-leaves the release locked.
+leaves the release locked. `key:notify:failure` is registered before
+`deploy:unlock`: Deployer stops the `deploy:failed` chain at the first task
+that fails, and `deploy:unlock` fails whenever the host is unreachable.
 
 To enable Slack notifications, add the webhook to your project's `.env`
 (picked up automatically — no webhook means no notifications):
