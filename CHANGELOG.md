@@ -3,6 +3,19 @@
 All notable changes to this package are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-09-21
+
+### Added
+
+- `key:wordfence:fix-waf` rewrites the hardcoded `/releases/<n>` path in
+  Wordfence's WAF bootstrap file to `/current` and runs `php -l` on the result
+  (`recipe/key/bedrock/wordfence.php`). Wordfence writes an absolute release
+  path when the firewall is enabled, so the firewall broke on the next deploy.
+- `wordfence_waf_file` points at that file. The task skips when it is not set
+  and warns when the file does not exist, so it is harmless on Bedrock hosts
+  without Wordfence. Like the other Bedrock tasks it is not wired into the
+  deploy flow; hook it after `deploy:publish` in your project's `deploy.php`.
+
 ## [1.1.3] - 2026-08-31
 
 ### Fixed

@@ -25,6 +25,7 @@ final class BedrockTest extends TestCase
         Context::push(new Context(new Host('test')));
         require_once __DIR__ . '/../recipe/key/bedrock/build.php';
         require_once __DIR__ . '/../recipe/key/bedrock/languages.php';
+        require_once __DIR__ . '/../recipe/key/bedrock/wordfence.php';
     }
 
     public function testThemePathFollowsConfiguredTheme(): void
@@ -52,5 +53,34 @@ final class BedrockTest extends TestCase
     public function testLanguagesDefaultToDutch(): void
     {
         $this->assertSame(['nl_NL'], \Deployer\get('key_languages'));
+    }
+
+    public function testWordfenceTaskRegistered(): void
+    {
+        $this->assertTrue($this->deployer->tasks->has('key:wordfence:fix-waf'));
+    }
+
+    /**
+     * Without wordfence_waf_file the task must return before test()/run(),
+     * which need a real connection. No throw means the guard works, so the
+     * task is harmless on hosts without Wordfence.
+     *
+     * The null check is the precondition, not a formality: once anything sets
+     * a default for wordfence_waf_file, the callback reaches test() and blocks
+     * on an SSH connection for about a minute before failing. Asserting it
+     * here turns that CI hang into an immediate, self-explaining failure.
+     */
+    public function testWordfenceIsNoOpWhenWafFileIsNotConfigured(): void
+    {
+        $this->assertNull(\Deployer\get('wordfence_waf_file', null));
+
+        $this->taskCallback('key:wordfence:fix-waf')();
+    }
+
+    // Task::$callback is private with no public getter; use reflection to read it.
+    private function taskCallback(string $name): \Closure
+    {
+        $task = $this->deployer->tasks->get($name);
+        return (new \ReflectionProperty($task, 'callback'))->getValue($task);
     }
 }

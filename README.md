@@ -238,14 +238,22 @@ since Bedrock is composer-based) plus the shared `key` recipe, and shares
 - `key:install:languages` — downloads `wp-cli.phar` into the release and
   installs the core, plugin and theme languages for every language in
   `key_languages`.
+- `key:wordfence:fix-waf` — rewrites the hardcoded `/releases/<n>` path in
+  Wordfence's WAF bootstrap file to `/current`, so the firewall keeps working
+  after the next deploy, and runs `php -l` on the result. Skips when
+  `wordfence_waf_file` is not set and warns when the file does not exist.
 
-Neither task is wired into the deploy flow; call them directly or wire them in
-your project's `deploy.php`:
+None of these tasks is wired into the deploy flow; call them directly or wire
+them in your project's `deploy.php`:
 
 ```php
 after('deploy:vendors', 'key:build:resources');
 before('deploy:publish', 'key:install:languages');
+after('deploy:publish', 'key:wordfence:fix-waf');
 ```
+
+`key:wordfence:fix-waf` must run after the `current` symlink points at the new
+release, otherwise it rewrites a path that is about to change again.
 
 ### Configuration
 
@@ -256,6 +264,7 @@ before('deploy:publish', 'key:install:languages');
 | `key_build_command` | `yarn && yarn build` | Local build command. |
 | `key_build_uploads` | `['assets/js/', 'style.css']` | Build artifacts to upload, relative to the theme path. Trailing slash = directory, no slash = single file. |
 | `key_languages` | `['nl_NL']` | Languages installed by `key:install:languages`. |
+| `wordfence_waf_file` | unset | Absolute path to Wordfence's WAF bootstrap file (e.g. `~/sites/example/shared/wordfence-waf.php`); required for `key:wordfence:fix-waf`. |
 
 ## Adding a platform
 

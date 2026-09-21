@@ -16,6 +16,7 @@ set('key_platform', 'BEDROCK');
 require_once __DIR__ . '/../key.php';
 require_once __DIR__ . '/bedrock/build.php';
 require_once __DIR__ . '/bedrock/languages.php';
+require_once __DIR__ . '/bedrock/wordfence.php';
 
 desc('Deploys your project');
 task('deploy', [
